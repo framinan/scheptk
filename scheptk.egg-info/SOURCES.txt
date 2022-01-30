@@ -1,0 +1,9 @@
+README.md
+setup.py
+scheptk/__init__.py
+scheptk/scheptk.py
+scheptk.egg-info/PKG-INFO
+scheptk.egg-info/SOURCES.txt
+scheptk.egg-info/dependency_links.txt
+scheptk.egg-info/requires.txt
+scheptk.egg-info/top_level.txt

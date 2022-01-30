@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: scheptk
+Version: 0.0.1
+Summary: Python scheduling package
+Home-page: UNKNOWN
+Author: Jose M Framinan
+Author-email: framinan@us.es
+License: UNKNOWN
+Description: # scheptk
+        
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3.7
+Classifier: License :: OSI Approved :: GNU General Public License v3 (GPLv3)
+Description-Content-Type: text/markdown
