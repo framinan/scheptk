@@ -111,3 +111,15 @@ def random_sequence(size):
             number = randint(0, size-1)
         sequence.append(number)
     return sequence
+
+# find_index_max() returns the index where the maximum value is found
+def find_index_max(list):
+    tuple = enumerate(list)
+    sorted_tuple = sorted(tuple, key=operator.itemgetter(1), reverse=True)
+    return sorted_tuple[0][0]
+
+# find_index_min() returns the index where the minimum value is found
+def find_index_min(list):
+    tuple = enumerate(list)
+    sorted_tuple = sorted(tuple, key=operator.itemgetter(1), reverse=False)
+    return sorted_tuple[0][0]
