@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod #abstract classes
 import sys # to stop the execution (funcion exit() )
+import os # to implement deletion of files
+from random import randint # random solutions
 
-
-from scheptk.util import print_tag_value, print_tag_vector, print_tag_matrix, read_tag, find_index_min
+from scheptk.util import random_sequence, read_tag, find_index_min, print_tag, write_tag
 
 
 class Instance(ABC):
@@ -17,124 +18,129 @@ class Instance(ABC):
     
     # abstract method completion times
     @abstractmethod
-    def ct(self, sequence):
+    def Cj(self, sequence):
+        pass
+ 
+   # abstract method generates a random solution for the instance
+    @abstractmethod
+    def random_solution(self):
         pass
  
     # concrete method makespan
     def Cmax(self, sequence):
-        return max(self.ct(sequence))
+        return max(self.Cj(sequence))
 
     # max earliness
     def Emax(self, sequence):
          if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")        
-         return max([ max(self.dd[sequence[index]] - item,0) for index,item in enumerate(self.ct(sequence))])
+         return max([ max(self.dd[sequence[index]] - item,0) for index,item in enumerate(self.Cj(sequence))])
 
    # max flowtime
     def Fmax(self, sequence):
-        return max([item - self.r[sequence[index]] for index,item in enumerate(self.ct(sequence))])
+        return max([item - self.r[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
         
     # max lateness
     def Lmax(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return max([ item - self.dd[sequence[index]] for index,item in enumerate(self.ct(sequence))])
+        return max([ item - self.dd[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
 
     # max tardiness
     def Tmax(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return max([ max(item - self.dd[sequence[index]],0) for index,item in enumerate(self.ct(sequence))])
+        return max([ max(item - self.dd[sequence[index]],0) for index,item in enumerate(self.Cj(sequence))])
 
     # sum of completion tme
     def SumCj(self, sequence):
-        return sum(self.ct(sequence))
+        return sum(self.Cj(sequence))
 
     # sum earliness
     def SumEj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")        
-        return sum([ max(self.dd[sequence[index]] - item,0) for index,item in enumerate(self.ct(sequence))])
+        return sum([ max(self.dd[sequence[index]] - item,0) for index,item in enumerate(self.Cj(sequence))])
 
    # sum flowtime
     def SumFj(self, sequence):
-        return sum([item - self.r[sequence[index]] for index,item in enumerate(self.ct(sequence))])
+        return sum([item - self.r[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
 
     # sum lateness
     def SumLj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([ item - self.dd[sequence[index]] for index,item in enumerate(self.ct(sequence))])
+        return sum([ item - self.dd[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
 
     # sum tardiness
     def SumTj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([ max(item - self.dd[sequence[index]],0) for index,item in enumerate(self.ct(sequence))])           
+        return sum([ max(item - self.dd[sequence[index]],0) for index,item in enumerate(self.Cj(sequence))])           
 
     # sum of tardy jobs
     def SumUj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([1 if (item - self.dd[sequence[index]]) > 0 else 0 for index,item in enumerate(self.ct(sequence))])
+        return sum([1 if (item - self.dd[sequence[index]]) > 0 else 0 for index,item in enumerate(self.Cj(sequence))])
 
     # weighted makespan
     def WjCmax(self, sequence):
-        return max([item * self.w[sequence[index]] for index,item in enumerate(self.ct(sequence))])
+        return max([item * self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
 
     # weighted max earliness
     def WjEmax(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")        
-        return max([ (max(self.dd[sequence[index]] - item,0) * self.w[sequence[index]]) for index,item in enumerate(self.ct(sequence))])
+        return max([ (max(self.dd[sequence[index]] - item,0) * self.w[sequence[index]]) for index,item in enumerate(self.Cj(sequence))])
 
    # weighted max flowtime
     def WjFmax(self, sequence):
-        return max([(item - self.r[sequence[index]])* self.w[sequence[index]] for index,item in enumerate(self.ct(sequence))])
+        return max([(item - self.r[sequence[index]])* self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
         
     # weighted max lateness
     def WjLmax(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return max([ (item - self.dd[sequence[index]])*self.w[sequence[index]] for index,item in enumerate(self.ct(sequence))])
+        return max([ (item - self.dd[sequence[index]])*self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
 
     # weighted max tardiness
     def WjTmax(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return max([ (max(item - self.dd[sequence[index]],0) * self.w[sequence[index]]) for index,item in enumerate(self.ct(sequence))])
+        return max([ (max(item - self.dd[sequence[index]],0) * self.w[sequence[index]]) for index,item in enumerate(self.Cj(sequence))])
         
     # weighted sum of completion times
     def SumWjCj(self, sequence):
-        return sum([item * self.w[sequence[index]] for index,item in enumerate(self.ct(sequence))])
+        return sum([item * self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
 
     # weighted sum of earliness
     def SumWjEj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")        
-        return sum([ (max(self.dd[sequence[index]] - item,0) * self.w[sequence[index]]) for index,item in enumerate(self.ct(sequence))])
+        return sum([ (max(self.dd[sequence[index]] - item,0) * self.w[sequence[index]]) for index,item in enumerate(self.Cj(sequence))])
 
     # weighted sum of flowtime
     def WjFmax(self, sequence):
-        return sum([(item - self.r[sequence[index]])* self.w[sequence[index]] for index,item in enumerate(self.ct(sequence))])
+        return sum([(item - self.r[sequence[index]])* self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
    
     # weighted sum of lateness
     def SumWjLj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([ (item - self.dd[sequence[index]])*self.w[sequence[index]] for index,item in enumerate(self.ct(sequence))])
+        return sum([ (item - self.dd[sequence[index]])*self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
 
     # weighted sum of tardiness
     def SumWjTj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([ (max(item - self.dd[sequence[index]],0) * self.w[sequence[index]]) for index,item in enumerate(self.ct(sequence))])
+        return sum([ (max(item - self.dd[sequence[index]],0) * self.w[sequence[index]]) for index,item in enumerate(self.Cj(sequence))])
 
     # weighted sum of tardy jobs
     def SumWjUj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([1 if (item - self.dd[sequence[index]]) > 0 else 0 for index,item in enumerate(self.ct(sequence))])
+        return sum([1 if (item - self.dd[sequence[index]]) > 0 else 0 for index,item in enumerate(self.Cj(sequence))])
 
 
 # class to implement the single machine layout
@@ -150,7 +156,7 @@ class SingleMachine(Instance):
             print("No jobs specified. The program cannot continue.")
             sys.exit()
         else:
-            print_tag_value("JOBS", self.jobs)
+            print_tag("JOBS", self.jobs)
         
         # processing times (mandatory data)
         self.pt = read_tag(filename,"PT")
@@ -162,7 +168,7 @@ class SingleMachine(Instance):
                 print("Number of processing times does not match the number of jobs (JOBS={}, length of PT={}). The program cannot continue".format(self.jobs, len(self.pt)) )
                 sys.exit()                
             else:
-                print_tag_vector("PT", self.pt)
+                print_tag("PT", self.pt)
         
         # weights (if not, default weights)
         self.w = read_tag(filename, "W")
@@ -170,14 +176,14 @@ class SingleMachine(Instance):
             self.w = [1.0 for i in range(self.jobs)]
             print("No weights specified for the jobs. All weights set to 1.0.")  
         else:
-            print_tag_vector("W", self.w)
+            print_tag("W", self.w)
 
         # due dates (if not,  -1 is assumed)
         self.dd = read_tag(filename, "DD")
         if(self.dd ==-1):
             print("No due dates specified for the jobs. All due dates assummed to be infinite.")           
         else:
-            print_tag_vector("DD", self.dd)
+            print_tag("DD", self.dd)
 
         # release dates (if not, 0 is assumed)
         self.r = read_tag(filename,"R")
@@ -185,7 +191,7 @@ class SingleMachine(Instance):
             self.r = [0 for i in range(self.jobs)]
             print("No release dates specified for the jobs. All release dates set to zero.")   
         else:
-            print_tag_vector("R", self.r)
+            print_tag("R", self.r)
         
         print("----- end of SingleMachine instance data from file " + filename + " -------")
         
@@ -197,8 +203,37 @@ class SingleMachine(Instance):
         for i in range(1,len(sequence)):
             completion_time.append(max(completion_time[i-1],self.r[sequence[i]]) + self.pt[sequence[i]])
         return completion_time
+
+    # implementation of Cj
+    # for the SingleMachine there is no difference between ct and Cj
+    def Cj(self,sequence):
+        return self.ct(sequence)
    
-    
+    # implementation of random_solution()
+    def random_solution(self):
+        return random_sequence(self.jobs)
+
+   # implementation of write_schedule
+    def write_schedule(self, sequence, filename):
+       # delete existing schedule
+       if(os.path.exists(filename)):
+           os.remove(filename)
+       # compute completion times
+       ct = self.ct(sequence)
+       # only the jobs that are to be scheduled
+       write_tag('JOBS',len(sequence), filename)
+       write_tag('MACHINES',1, filename)
+       # schedule data matrix
+       tag_value = ''
+       for j in range(len(sequence)-1):
+           tag_value = tag_value + '0,{},{};'.format(ct[j]- self.pt[sequence[j]], self.pt[sequence[j]])
+       # last job
+       tag_value = tag_value + '0,{},{}'.format(ct[len(sequence)-1]- self.pt[sequence[len(sequence)-1]], self.pt[sequence[len(sequence)-1]])
+       write_tag('SCHEDULE_DATA', tag_value, filename)
+       write_tag('JOB_ORDER',sequence, filename)
+        # job names
+       #job_names = ['J' + str(e) for e in sequence]
+       #write_tag('JOB_NAMES',job_names, filename)         
 
 # class to implement the flowshop layout
 class FlowShop(Instance):
@@ -217,14 +252,14 @@ class FlowShop(Instance):
             print("No jobs specified. The program cannot continue.")
             sys.exit()
         else:
-            print_tag_value("JOBS", self.jobs)
+            print_tag("JOBS", self.jobs)
         # machines (another mandatory data)
         self.machines = read_tag(filename, "MACHINES")
         if(self.machines ==-1):
             print("No machines specified. The program cannot continue.")
             sys.exit()
         else:
-            print_tag_value("MACHINES", self.machines)
+            print_tag("MACHINES", self.machines)
 
         # processing times (mandatory data, machines in rows, jobs in cols)
         self.pt = read_tag(filename,"PT")
@@ -240,7 +275,7 @@ class FlowShop(Instance):
                     if(len(self.pt[i])!= self.jobs):
                         print("Number of processing times does not match the number of jobs for machine {} (JOBS={}, length of col={}). The program cannot continue".format(i, self.jobs, len(self.pt[i])) )
                         sys.exit()
-                print_tag_matrix("PT", self.pt)           
+                print_tag("PT", self.pt)           
         
         # weights (if not, default weights)
         self.w = read_tag(filename, "W")
@@ -248,14 +283,14 @@ class FlowShop(Instance):
             self.w = [1.0 for i in range(self.jobs)]
             print("No weights specified for the jobs. All weights set to 1.0.") 
         else:
-            print_tag_vector("W", self.w)
+            print_tag("W", self.w)
 
         # due dates (if not,  -1 is assumed)
         self.dd = read_tag(filename, "DD")
         if(self.dd ==-1):
             print("No due dates specified for the jobs. All due dates assummed to be infinite. No due-date related objectives can be computed.")           
         else:
-            print_tag_vector("DD", self.dd)
+            print_tag("DD", self.dd)
 
         # release dates (if not, 0 is assumed)
         self.r = read_tag(filename,"R")
@@ -263,14 +298,18 @@ class FlowShop(Instance):
             self.r = [0 for i in range(self.jobs)]
             print("No release dates specified for the jobs. All release dates set to zero.")    
         else:
-            print_tag_vector("R", self.r)
+            print_tag("R", self.r)
 
         print("----- end of FlowShop instance data from file " + filename + " -------")    
 
+    # implementation of random_solution()
+    def random_solution(self):
+        return random_sequence(self.jobs)
 
-    # implementation of completion times for FlowShop
-    def ct(self, sequence):
-        # initializing the completion times
+
+    # implementation of the completion times of each job on each machine for FlowShop
+    def ct(self,sequence):
+         # initializing the completion times
         completion_time = [[0 for j in range(len(sequence))] for i in range(self.machines)]
         # first job in first machine
         completion_time[0][0] = self.r[sequence[0]] + self.pt[0][sequence[0]] 
@@ -283,10 +322,44 @@ class FlowShop(Instance):
         # rest of jobs in rest of machines
         for i in range(1, self.machines):
             for j in range(1, len(sequence)):
-                completion_time[i][j] = max(completion_time[i-1][j], completion_time[i][j-1]) + self.pt[i][sequence[j]]
+                completion_time[i][j] = max(completion_time[i-1][j], completion_time[i][j-1]) + self.pt[i][sequence[j]]  
+        return completion_time     
+
+    # implementation of completion times for FlowShop
+    def Cj(self, sequence):
+        # call function to compute the completion time of each job on each machine
+        completion_time = self.ct(sequence)
         # computing completion times of each job
         ct = [completion_time[self.machines-1][j] for j in range(len(sequence)) ]
         return ct
+
+    # implementation of write_schedule() for FlowShop
+    def write_schedule(self, sequence, filename):
+       # delete existing schedule
+       if(os.path.exists(filename)):
+           os.remove(filename)
+       # compute completion times
+       ct = self.ct(sequence)
+       # only the jobs that have to be displayed (those in the sequence)
+       write_tag('JOBS',len(sequence), filename)
+       write_tag('MACHINES',self.machines, filename)
+       # schedule data matrix
+       tag_value = ''
+       for j in range(len(sequence)-1):
+           for i in range(self.machines-1):
+                tag_value = tag_value + '{},{},{},'.format(i,ct[i][j]- self.pt[i][sequence[j]], self.pt[i][sequence[j]])
+           tag_value = tag_value + '{},{},{};'.format(self.machines-1,ct[self.machines-1][j]- self.pt[self.machines-1][sequence[j]], self.pt[self.machines-1][sequence[j]])
+       # last job
+       for i in range(self.machines-1):
+           tag_value = tag_value + '{},{},{},'.format(i,ct[i][len(sequence)-1]- self.pt[i][sequence[len(sequence)-1]], self.pt[i][sequence[len(sequence)-1]])
+       # last job in last machine 
+       tag_value = tag_value + '{},{},{}'.format(self.machines-1,ct[self.machines-1][len(sequence)-1]- self.pt[self.machines-1][sequence[len(sequence)-1]], self.pt[self.machines-1][sequence[len(sequence)-1]])
+       write_tag('SCHEDULE_DATA', tag_value, filename)
+       write_tag('JOB_ORDER',sequence, filename)
+       # job names
+       #job_names = ['J' + str(e) for e in sequence]
+       #write_tag('JOB_NAMES',job_names, filename)
+
 
 
 # identical parallel machines
@@ -305,14 +378,14 @@ class ParallelMachines(Instance):
             print("No jobs specified. The program cannot continue.")
             sys.exit()
         else:
-            print_tag_value("JOBS", self.jobs)
+            print_tag("JOBS", self.jobs)
         # machines (another mandatory data)
         self.machines = read_tag(filename, "MACHINES")
         if(self.machines ==-1):
             print("No machines specified. The program cannot continue.")
             sys.exit()
         else:
-            print_tag_value("MACHINES", self.machines)
+            print_tag("MACHINES", self.machines)
 
         # processing times (a vector, one pt for jobs). Mandatory
         self.pt = read_tag(filename,"PT")
@@ -324,7 +397,7 @@ class ParallelMachines(Instance):
                 print("Number of processing times does not match the number of jobs (JOBS={}, length of PT={}). The program cannot continue".format(self.jobs, len(self.pt)) )
                 sys.exit()                
             else:
-                print_tag_vector("PT", self.pt)
+                print_tag("PT", self.pt)
 
         # weights (if not, default weights)
         self.w = read_tag(filename, "W")
@@ -332,14 +405,14 @@ class ParallelMachines(Instance):
             self.w = [1.0 for i in range(self.jobs)]
             print("No weights specified for the jobs. All weights set to 1.0.") 
         else:
-            print_tag_vector("W", self.w)
+            print_tag("W", self.w)
 
         # due dates (if not,  -1 is assumed)
         self.dd = read_tag(filename, "DD")
         if(self.dd ==-1):
             print("No due dates specified for the jobs. All due dates assummed to be infinite. No due-date related objectives can be computed.")           
         else:
-            print_tag_vector("DD", self.dd)
+            print_tag("DD", self.dd)
 
         # release dates (if not, 0 is assumed)
         self.r = read_tag(filename,"R")
@@ -347,14 +420,14 @@ class ParallelMachines(Instance):
             self.r = [0 for i in range(self.jobs)]
             print("No release dates specified for the jobs. All release dates set to zero.")    
         else:
-            print_tag_vector("R", self.r)
+            print_tag("R", self.r)
 
         print("----- end of ParallelMachines instance data from file " + filename + " -------")    
   
 
     # implementation of completion times for parallel machines (ECT rule)
     # ties are broken with the lowest index
-   def ct(self, sequence):
+   def Cj(self, sequence):
 
         # initializing completion times in the machines to zero
         ct_machines = [0 for i in range(self.machines)]
@@ -369,6 +442,10 @@ class ParallelMachines(Instance):
             completion_times[sequence[j]] = ct_machines[index_machine]
     
         return completion_times
+
+    # implementation of random_solution()
+   def random_solution(self):
+        return random_sequence(self.jobs)
 
 
 class UnrelatedMachines(Instance):
@@ -386,14 +463,14 @@ class UnrelatedMachines(Instance):
             print("No jobs specified. The program cannot continue.")
             sys.exit()
         else:
-            print_tag_value("JOBS", self.jobs)
+            print_tag("JOBS", self.jobs)
         # machines (another mandatory data)
         self.machines = read_tag(filename, "MACHINES")
         if(self.machines ==-1):
             print("No machines specified. The program cannot continue.")
             sys.exit()
         else:
-            print_tag_value("MACHINES", self.machines)
+            print_tag("MACHINES", self.machines)
 
         # processing times (mandatory data, machines in rows, jobs in cols)
         self.pt = read_tag(filename,"PT")
@@ -409,7 +486,7 @@ class UnrelatedMachines(Instance):
                     if(len(self.pt[i])!= self.jobs):
                         print("Number of processing times does not match the number of jobs for machine {} (JOBS={}, length of col={}). The program cannot continue".format(i, self.jobs, len(self.pt[i])) )
                         sys.exit()
-                print_tag_matrix("PT", self.pt)     
+                print_tag("PT", self.pt)     
 
         # weights (if not, default weights)
         self.w = read_tag(filename, "W")
@@ -417,14 +494,14 @@ class UnrelatedMachines(Instance):
             self.w = [1.0 for i in range(self.jobs)]
             print("No weights specified for the jobs. All weights set to 1.0.") 
         else:
-            print_tag_vector("W", self.w)
+            print_tag("W", self.w)
 
         # due dates (if not,  -1 is assumed)
         self.dd = read_tag(filename, "DD")
         if(self.dd ==-1):
             print("No due dates specified for the jobs. All due dates assummed to be infinite. No due-date related objectives can be computed.")           
         else:
-            print_tag_vector("DD", self.dd)
+            print_tag("DD", self.dd)
 
         # release dates (if not, 0 is assumed)
         self.r = read_tag(filename,"R")
@@ -432,14 +509,14 @@ class UnrelatedMachines(Instance):
             self.r = [0 for i in range(self.jobs)]
             print("No release dates specified for the jobs. All release dates set to zero.")    
         else:
-            print_tag_vector("R", self.r)
+            print_tag("R", self.r)
 
         print("----- end of UnrelatedMachines instance data from file " + filename + " -------")    
   
 
     # implementation of completion times for unrelated parallel machines (ECT rule)
     # ties are broken with the lowest index
-   def ct(self, sequence):
+   def Cj(self, sequence):
 
         # initializing completion times in the machines to zero
         ct_machines = [0 for i in range(self.machines)]
@@ -457,3 +534,201 @@ class UnrelatedMachines(Instance):
     
         return completion_times
 
+    # implementation of random_solution()
+   def random_solution(self):
+        return random_sequence(self.jobs)
+
+
+class JobShop(Instance):
+     def __init__(self, filename):
+
+        # initializing additional data (not basic)
+        self.machines = 0
+        self.rt = []
+
+        # starting reading
+        print("----- Reading JobShop instance data from file " + filename + " -------")
+        # jobs (mandatory data)
+        self.jobs = read_tag(filename,"JOBS")
+        # if jobs = -1 the program cannot continue
+        if(self.jobs ==-1):
+            print("No jobs specified. The program cannot continue.")
+            sys.exit()
+        else:
+            print_tag("JOBS", self.jobs)
+        # machines (another mandatory data)
+        self.machines = read_tag(filename, "MACHINES")
+        if(self.machines ==-1):
+            print("No machines specified. The program cannot continue.")
+            sys.exit()
+        else:
+            print_tag("MACHINES", self.machines)
+
+        # processing times (mandatory data, machines in rows, jobs in cols)
+        self.pt = read_tag(filename,"PT")
+        if(self.pt ==-1):
+            print("No processing times specified. The program cannot continue.")
+            sys.exit()
+        else:
+            if(len(self.pt) != self.machines ):
+                print("Number of processing times does not match the number of machines (MACHINES={}, length of PT={}). The program cannot continue".format(self.machines, len(self.pt)) )
+                sys.exit()
+            else:
+                for i in range(self.machines):
+                    if(len(self.pt[i])!= self.jobs):
+                        print("Number of processing times does not match the number of jobs for machine {} (JOBS={}, length of col={}). The program cannot continue".format(i, self.jobs, len(self.pt[i])) )
+                        sys.exit()
+                print_tag("PT", self.pt)           
+        
+        # routing matrix times (mandatory data, machines in rows, jobs in cols)
+        self.rt = read_tag(filename,"RT")
+        if(self.rt ==-1):
+            print("No routing specified. The program cannot continue.")
+            sys.exit()
+        else:
+            if(len(self.rt) != self.jobs ):
+                print("Number of routes does not match the number of jobs (JOBS={}, length of RT={}). The program cannot continue".format(self.jobs, len(self.rt)) )
+                sys.exit()
+            else:
+                for j in range(self.jobs):
+                    if(len(self.rt[j])!= self.machines):
+                        print("Number of visiting stations does not match the number of machines for job {} (MACHINES={}, length of col={}). The program cannot continue".format(j, self.machines, len(self.rt[j])) )
+                        sys.exit()
+                print_tag("RT", self.rt)           
+
+
+        # weights (if not, default weights)
+        self.w = read_tag(filename, "W")
+        if(self.w ==-1):
+            self.w = [1.0 for i in range(self.jobs)]
+            print("No weights specified for the jobs. All weights set to 1.0.") 
+        else:
+            print_tag("W", self.w)
+
+        # due dates (if not,  -1 is assumed)
+        self.dd = read_tag(filename, "DD")
+        if(self.dd ==-1):
+            print("No due dates specified for the jobs. All due dates assummed to be infinite. No due-date related objectives can be computed.")           
+        else:
+            print_tag("DD", self.dd)
+
+        # release dates (if not, 0 is assumed)
+        self.r = read_tag(filename,"R")
+        if(self.r==-1):
+            self.r = [0 for i in range(self.jobs)]
+            print("No release dates specified for the jobs. All release dates set to zero.")    
+        else:
+            print_tag("R", self.r)
+
+        print("----- end of JobShop instance data from file " + filename + " -------")    
+
+
+     def ct(self, sequence):
+         
+       # get the jobs involved in the sequence (it can be a partial sequence)
+       jobs_involved = list(set(sequence))
+
+       # completion times of jobs and machines
+       ct_jobs = [self.r[jobs_involved[j]] for j in range(len(jobs_involved))]
+       ct_machines = [0 for i in range(self.machines)]  
+
+       # completion time of each job on each machine
+       ct = [[0 for j in range(len(jobs_involved))] for i in range(self.machines)]
+       print(self.rt)
+
+       # number of operations completed by each job (initially zero)
+       n_ops_jobs = [0 for j in range(len(jobs_involved))]
+
+       for job in sequence:
+
+           # determine the corresponding machine
+           machine = self.rt[job][n_ops_jobs[jobs_involved.index(job)]]
+
+           # compute completion time
+           curr_completion_time = max(ct_jobs[jobs_involved.index(job)], ct_machines[machine]) + self.pt[machine][job]
+
+           # update completion times
+           ct_jobs[jobs_involved.index(job)] = curr_completion_time
+           ct_machines[machine] = curr_completion_time
+           #print("index={}, machine={}".format(index,machine))
+           ct[machine][jobs_involved.index(job)] = curr_completion_time
+
+           # update number of operations for the job
+           n_ops_jobs[jobs_involved.index(job)] += 1
+
+       return ct
+
+     def Cj(self, sequence):
+       # get the jobs involved in the sequence (it can be a partial sequence)
+       jobs_involved = list(set(sequence))
+
+       # completion times of jobs and machines
+       ct_jobs = [self.r[jobs_involved[j]] for j in range(len(jobs_involved))]
+       ct_machines = [0 for i in range(self.machines)]  
+
+       # number of operations completed by each job (initially zero)
+       n_ops_jobs = [0 for j in range(len(jobs_involved))]
+
+       for job in sequence:
+           # determine the corresponding machine
+           machine = self.rt[job][n_ops_jobs[job]]
+
+           # compute completion time
+           curr_completion_time = max(ct_jobs[job], ct_machines[machine]) + self.pt[machine][job]
+
+           # update completion times
+           ct_jobs[job] = curr_completion_time
+           ct_machines[machine] = curr_completion_time
+
+           # update number of operations for the job
+           n_ops_jobs[job] += 1
+
+       return ct_jobs       
+    
+     # implementation of a random solution of the instance
+     def random_solution(self):
+        solution = []
+        curr_op = 0
+        total_ops = self.jobs * self.machines
+        pending_ops = [self.machines for j in range(self.jobs)]
+        while(curr_op < total_ops):
+            job = randint(0,self.jobs-1)
+            if(pending_ops[job] > 0):
+                solution.append(job)
+                pending_ops[job] = pending_ops[job]-1
+                curr_op = curr_op + 1
+        return solution
+
+    # implementation of write_schedule() for JobShop
+     def write_schedule(self, sequence, filename):
+       # delete existing schedule
+       if(os.path.exists(filename)):
+           os.remove(filename)
+       # compute completion times
+       ct = self.ct(sequence)
+       # get jobs involved
+       jobs_involved = list(set(sequence))
+       # only the jobs that have to be displayed (those in the sequence)
+       write_tag('JOBS',len(jobs_involved), filename)
+       write_tag('MACHINES',self.machines, filename)
+       # schedule data matrix
+       tag_value = ''
+       for j in range(len(jobs_involved)-1):
+           for i in range(self.machines):
+               mach = self.rt[jobs_involved[j]][i]
+               tag_value = tag_value + "{},{},{}".format(mach,ct[mach][j] - self.pt[mach][jobs_involved[j]],self.pt[mach][jobs_involved[j]])        
+               if(i < self.machines-1):
+                   tag_value = tag_value + ","
+               else:
+                   tag_value = tag_value + ";"
+       # last job
+       for i in range(self.machines):
+           mach = self.rt[jobs_involved[len(jobs_involved)-1]][i]
+           tag_value = tag_value + "{},{},{}".format(mach,ct[mach][len(jobs_involved)-1] - self.pt[mach][jobs_involved[len(jobs_involved)-1]],self.pt[mach][jobs_involved[len(jobs_involved)-1]])        
+           if(i < self.machines-1):
+                tag_value = tag_value + ","
+       write_tag('SCHEDULE_DATA', tag_value, filename)
+       write_tag('JOB_ORDER',jobs_involved, filename)
+
+
+       

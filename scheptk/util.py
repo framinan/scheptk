@@ -14,23 +14,40 @@ def get_proper_type(x):
             return x
 
 
+# utility function to print the content of val (escalar, vector, matrix) with a tag
+def print_tag(tag, value):
+    # if it is a list
+    if( isinstance(value, list)):
+        # if it is a matrix
+        if( isinstance(value[0],list)):
+            print("[" + tag + "=" + matrix_to_string(value) + "]")
+        else:
+            # it is a vector (list)
+            print("[" + tag + "=" + vector_to_string(value) + "]")
+    else:
+        # it is an scalar
+        print("[" + tag + "=" + str(value) + "]")  
+
+
+
 # utility function to print the content of a value (escalar) with a tag
-def print_tag_value(tag, value):
-    print("[" + tag + "=" + str(value) + "]")     
+# def print_tag_value(tag, value):
+#     print("[" + tag + "=" + str(value) + "]")     
 
-
-# utility function to print the content of a vector with a tag
-def print_tag_vector(tag, vector):
-    cadena = "[" + tag + "="
+# utility function to map a vector into a string (mostly to be used internally)
+def vector_to_string(vector):
+    cadena = ''
     for i in range(len(vector)-1):
         cadena = cadena + str(vector[i]) + ","
-    cadena = cadena + str(vector[len(vector)-1]) + "]"
-    print(cadena)    
+    return cadena + str(vector[len(vector)-1]) 
 
+# utility function to print the content of a vector with a tag
+# def print_tag_vector(tag, vector):
+#     return "[" + tag + "=" + vector_to_string(vector) + "]"
 
-# utility function to print the content of a matrix with a tag
-def print_tag_matrix(tag, matrix):
-    cadena = "[" + tag + "="
+# utility function to map a matrix into a string (mostly to be used internally)
+def matrix_to_string(matrix):
+    cadena = ''
     for i in range(len(matrix)-1):
         for j in range(len(matrix[i]) - 1):
             cadena = cadena + str(matrix[i][j]) + ","
@@ -39,8 +56,12 @@ def print_tag_matrix(tag, matrix):
     for j in range(len(matrix[0])-1):
         cadena = cadena + str(matrix[len(matrix)-1][j]) + ","
     # last col of last row
-    cadena = cadena + str(matrix[len(matrix)-1][len(matrix[0])-1]) + "]"
-    print(cadena)
+    return cadena + str(matrix[len(matrix)-1][len(matrix[0])-1]) 
+   
+
+# utility function to print the content of a matrix with a tag
+# def print_tag_matrix(tag, matrix):
+#     return "[" + tag + "=" + matrix_to_string(matrix) + "]"
 
 # utility function to read a tag
 def read_tag(filename, tag):
@@ -112,6 +133,7 @@ def random_sequence(size):
         sequence.append(number)
     return sequence
 
+
 # find_index_max() returns the index where the maximum value is found
 def find_index_max(list):
     tuple = enumerate(list)
@@ -123,3 +145,20 @@ def find_index_min(list):
     tuple = enumerate(list)
     sorted_tuple = sorted(tuple, key=operator.itemgetter(1), reverse=False)
     return sorted_tuple[0][0]
+
+# utility function to write a tag (scalar, vector, matrix) and its value into a file
+def write_tag(tag, value, filename):
+    with open(filename, 'a') as file:
+        file.write('[' + tag + '=')
+
+        if(isinstance(value, list) ):
+            # if it is a list, let's see if it is a vector or a matrix
+            if(isinstance(value[0], list) ):
+                # matrix:
+                file.write(matrix_to_string(value) + "]\n")
+            else:
+                # vector
+                file.write(vector_to_string(value) + "]\n")
+        else:
+            # value
+            file.write(str(value) + "]\n")    
