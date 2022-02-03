@@ -29,11 +29,6 @@ def print_tag(tag, value):
         print("[" + tag + "=" + str(value) + "]")  
 
 
-
-# utility function to print the content of a value (escalar) with a tag
-# def print_tag_value(tag, value):
-#     print("[" + tag + "=" + str(value) + "]")     
-
 # utility function to map a vector into a string (mostly to be used internally)
 def vector_to_string(vector):
     cadena = ''
@@ -41,9 +36,6 @@ def vector_to_string(vector):
         cadena = cadena + str(vector[i]) + ","
     return cadena + str(vector[len(vector)-1]) 
 
-# utility function to print the content of a vector with a tag
-# def print_tag_vector(tag, vector):
-#     return "[" + tag + "=" + vector_to_string(vector) + "]"
 
 # utility function to map a matrix into a string (mostly to be used internally)
 def matrix_to_string(matrix):
@@ -58,10 +50,6 @@ def matrix_to_string(matrix):
     # last col of last row
     return cadena + str(matrix[len(matrix)-1][len(matrix[0])-1]) 
    
-
-# utility function to print the content of a matrix with a tag
-# def print_tag_matrix(tag, matrix):
-#     return "[" + tag + "=" + matrix_to_string(matrix) + "]"
 
 # utility function to read a tag
 def read_tag(filename, tag):
