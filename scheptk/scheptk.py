@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod #abstract classes
 import sys # to stop the execution (funcion exit() )
 import os # to implement deletion of files
+import operator # for sorted functions
 from random import randint
 
 from importlib_metadata import method_cache # random solutions
@@ -951,4 +952,54 @@ class OpenShop(Instance):
 
        write_tag('SCHEDULE_DATA', tag_value, filename)
        write_tag('JOB_ORDER',job_order, filename)    
+
+
+class Task:
+
+    def __init__(self, job, machine, st, ct):
+        self.job = job
+        self.machine = machine
+        self.st = st
+        self.ct = ct
+
+
+class Schedule():
+
+    def __init__(self):
+
+        self.task_list = []
+
+    def add_task(self, task):
+
+        self.task_list.append(task)
+
+    def write_schedule(self,filename):
+
+        # compute number of jobs and machines
+        jobs = list(set([task.job for task in self.task_list]))
+        machines = set([task.machine for task in self.task_list])
+        
+        # delete existing schedule
+        if(os.path.exists(filename)):
+           os.remove(filename)
+
+        # only the jobs that have to be displayed (those in the sequence)
+        write_tag('JOBS', len(jobs), filename)
+        write_tag('MACHINES',len(machines), filename)        
+
+        # schedule data matrix
+        tag_value = ''
+        # for all jobs write the corresponding task (ordered jobs)       
+        for j, job in enumerate(jobs):
+            sorted_tasks_in_job = sorted([[task.machine,task.st, task.ct] for task in self.task_list if task.job == job ], key=operator.itemgetter(1), reverse=False)
+            for index,task in enumerate(sorted_tasks_in_job):
+                tag_value = tag_value + '{},{},{}'.format(task[0], task[1], task[2] - task[1])
+                if(index ==len(sorted_tasks_in_job)-1):
+                    if( j!= len(jobs)-1):
+                        tag_value = tag_value + ';'
+                else:
+                    tag_value = tag_value + ','
+        write_tag('SCHEDULE_DATA', tag_value, filename)
+        write_tag('JOB_ORDER',jobs, filename)
+
 
