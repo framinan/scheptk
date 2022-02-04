@@ -2,11 +2,108 @@ from abc import ABC, abstractmethod #abstract classes
 import sys # to stop the execution (funcion exit() )
 import os # to implement deletion of files
 import operator # for sorted functions
+import matplotlib.pyplot as plt
 from random import randint
 
 from importlib_metadata import method_cache # random solutions
 
 from scheptk.util import random_sequence, read_tag, find_index_min, print_tag, sorted_index_asc, sorted_value_asc, write_tag
+
+
+class Task:
+
+    def __init__(self, job, machine, st, ct):
+        self.job = job
+        self.machine = machine
+        self.st = st
+        self.ct = ct
+
+
+class Schedule():
+
+    def __init__(self):
+
+        self.task_list = []
+
+    def add_task(self, task):
+
+        self.task_list.append(task)
+
+    def write_schedule(self,filename):
+
+        # compute number of jobs and machines
+        jobs = list(set([task.job for task in self.task_list]))
+        machines = set([task.machine for task in self.task_list])
+        
+        # delete existing schedule
+        if(os.path.exists(filename)):
+           os.remove(filename)
+
+        # only the jobs that have to be displayed (those in the sequence)
+        write_tag('JOBS', len(jobs), filename)
+        write_tag('MACHINES',len(machines), filename)        
+
+        # schedule data matrix
+        tag_value = ''
+        # for all jobs write the corresponding task (ordered jobs)       
+        for j, job in enumerate(jobs):
+            sorted_tasks_in_job = sorted([[task.machine,task.st, task.ct] for task in self.task_list if task.job == job ], key=operator.itemgetter(1), reverse=False)
+            for index,task in enumerate(sorted_tasks_in_job):
+                tag_value = tag_value + '{},{},{}'.format(task[0], task[1], task[2] - task[1])
+                if(index ==len(sorted_tasks_in_job)-1):
+                    if( j!= len(jobs)-1):
+                        tag_value = tag_value + ';'
+                else:
+                    tag_value = tag_value + ','
+        write_tag('SCHEDULE_DATA', tag_value, filename)
+        write_tag('JOB_ORDER',jobs, filename)
+
+    # print a basic gantt with the schedule given. Optionally, it saves the gantt in a png image
+    def print_schedule(self, filename=None):
+        
+        # parameters of the graphic
+        tick_starting_at = 10
+        tick_separation = 20
+        task_height = 8
+        font_height = 1
+
+        # palette of light colors
+        colors = ['red','lime','deepskyblue','bisque','mintcream','royalblue''sandybrown','palegreen','pink','violet','cyan','darkseagreen','gold']
+
+        # compute number of jobs and machines
+        jobs = list(set([task.job for task in self.task_list]))
+        machines = set([task.machine for task in self.task_list])
+
+        # create gantt
+        figure, gantt = plt.subplots()    
+        
+        # limits (makespan and depending on the number of machines)
+        gantt.set_xlim(0,max([task.ct for task in self.task_list]))
+        gantt.set_ylim(0,len(machines) * tick_separation + tick_starting_at)
+ 
+        # labels
+        gantt.set_xlabel('Time')
+        gantt.set_ylabel('Machines')
+
+        # ticks labels (y)
+        gantt.set_yticks([tick_starting_at + tick_separation *i + task_height/2 for i in range(len(machines))])
+        gantt.set_yticklabels(['M'+str(i) for i in range(len(machines))])
+
+        # populate the gantt
+        for job in jobs:
+
+            # get the tasks associated to the job
+            tasks_job = [[[(task.st, task.ct-task.st)],(tick_starting_at + tick_separation * task.machine, task_height)] for task in self.task_list if task.job == job]
+
+            # prints the rectangle and the text
+            for task in tasks_job:
+                gantt.broken_barh(task[0],task[1],facecolors=colors[job % len(colors)], edgecolors='black', label = 'J' + str(job))
+                gantt.text(task[0][0][0] + task[0][0][1]/2, task[1][0] + task_height/2 - font_height,'J' + str(job))
+
+        # optionally, the gantt is printed in hi-res
+        if(filename != None):
+            figure.savefig(filename, dpi=600)
+
 
 
 class Instance(ABC):
@@ -363,6 +460,24 @@ class FlowShop(Instance):
         # computing completion times of each job
         ct = [completion_time[self.machines-1][j] for j in range(len(sequence)) ]
         return ct
+
+    # implementation of print_schedule() for FlowShop
+    def print_schedule(self, sequence, filename=None):
+
+       # compute completion times
+       ct = self.ct(sequence)
+
+       # create the schedule
+       gantt = Schedule() 
+
+       # adding  all tasks
+       for j, job in enumerate(sequence):
+           for machine in range(self.machines):
+               gantt.add_task(Task(job,machine, ct[machine][j] - self.pt[machine][job], ct[machine][j]))
+
+       # printing the gantt
+       gantt.print_schedule(filename)
+
 
     # implementation of write_schedule() for FlowShop
     def write_schedule(self, sequence, filename):
@@ -953,53 +1068,5 @@ class OpenShop(Instance):
        write_tag('SCHEDULE_DATA', tag_value, filename)
        write_tag('JOB_ORDER',job_order, filename)    
 
-
-class Task:
-
-    def __init__(self, job, machine, st, ct):
-        self.job = job
-        self.machine = machine
-        self.st = st
-        self.ct = ct
-
-
-class Schedule():
-
-    def __init__(self):
-
-        self.task_list = []
-
-    def add_task(self, task):
-
-        self.task_list.append(task)
-
-    def write_schedule(self,filename):
-
-        # compute number of jobs and machines
-        jobs = list(set([task.job for task in self.task_list]))
-        machines = set([task.machine for task in self.task_list])
-        
-        # delete existing schedule
-        if(os.path.exists(filename)):
-           os.remove(filename)
-
-        # only the jobs that have to be displayed (those in the sequence)
-        write_tag('JOBS', len(jobs), filename)
-        write_tag('MACHINES',len(machines), filename)        
-
-        # schedule data matrix
-        tag_value = ''
-        # for all jobs write the corresponding task (ordered jobs)       
-        for j, job in enumerate(jobs):
-            sorted_tasks_in_job = sorted([[task.machine,task.st, task.ct] for task in self.task_list if task.job == job ], key=operator.itemgetter(1), reverse=False)
-            for index,task in enumerate(sorted_tasks_in_job):
-                tag_value = tag_value + '{},{},{}'.format(task[0], task[1], task[2] - task[1])
-                if(index ==len(sorted_tasks_in_job)-1):
-                    if( j!= len(jobs)-1):
-                        tag_value = tag_value + ';'
-                else:
-                    tag_value = tag_value + ','
-        write_tag('SCHEDULE_DATA', tag_value, filename)
-        write_tag('JOB_ORDER',jobs, filename)
 
 
