@@ -3,11 +3,11 @@ import sys # to stop the execution (funcion exit() )
 import os # to implement deletion of files
 import operator # for sorted functions
 import matplotlib.pyplot as plt
-from random import randint
+from random import randint # random solutions
 
-from importlib_metadata import method_cache # random solutions
+#from importlib_metadata import method_cache 
 
-from scheptk.util import random_sequence, read_tag, find_index_min, print_tag, sorted_index_asc, sorted_value_asc, write_tag
+from scheptk.util import random_sequence, read_tag, find_index_min, print_tag, sorted_index_asc, sorted_value_asc, sorted_value_desc, write_tag
 
 
 class Task:
@@ -21,18 +21,39 @@ class Task:
 
 class Schedule():
 
-    def __init__(self):
+    def __init__(self, filename=None):
 
+        # list of tasks in the schedule
         self.task_list = []
+        # job order (order to indicate which is each job in the schedule)
+        self.job_order = []
+
+        if(filename != None):
+            # load the tag with the job order
+            self.job_order = read_tag(filename,'JOB_ORDER')
+            # load the tag with the tasks
+            tasks = read_tag(filename,'SCHEDULE_DATA')
+            for j, tasks_job in enumerate(tasks):
+                index_task_in_job = 0
+                while(index_task_in_job < len(tasks_job)):
+                    self.add_task(Task(self.job_order[j], tasks_job[index_task_in_job], tasks_job[index_task_in_job + 1], tasks_job[index_task_in_job + 1] + tasks_job[index_task_in_job + 2]))
+                    index_task_in_job += 3
 
     def add_task(self, task):
 
+        # add the task to the list
         self.task_list.append(task)
 
-    def write_schedule(self,filename):
+        # add the job to the job order (in case it is a new job)
+        if( self.job_order.count(task.job) == 0):
+            self.job_order.append(task.job)
 
-        # compute number of jobs and machines
-        jobs = list(set([task.job for task in self.task_list]))
+
+
+    # save the schedule in a file
+    def save(self,filename):
+
+        # compute number of machines
         machines = set([task.machine for task in self.task_list])
         
         # delete existing schedule
@@ -40,26 +61,27 @@ class Schedule():
            os.remove(filename)
 
         # only the jobs that have to be displayed (those in the sequence)
-        write_tag('JOBS', len(jobs), filename)
+        write_tag('JOBS', len(self.job_order), filename)
         write_tag('MACHINES',len(machines), filename)        
 
         # schedule data matrix
         tag_value = ''
         # for all jobs write the corresponding task (ordered jobs)       
-        for j, job in enumerate(jobs):
+        for j, job in enumerate(self.job_order):
             sorted_tasks_in_job = sorted([[task.machine,task.st, task.ct] for task in self.task_list if task.job == job ], key=operator.itemgetter(1), reverse=False)
             for index,task in enumerate(sorted_tasks_in_job):
                 tag_value = tag_value + '{},{},{}'.format(task[0], task[1], task[2] - task[1])
                 if(index ==len(sorted_tasks_in_job)-1):
-                    if( j!= len(jobs)-1):
+                    if( j!= len(self.job_order)-1):
                         tag_value = tag_value + ';'
                 else:
                     tag_value = tag_value + ','
         write_tag('SCHEDULE_DATA', tag_value, filename)
-        write_tag('JOB_ORDER',jobs, filename)
+        write_tag('JOB_ORDER',self.job_order, filename)
+
 
     # print a basic gantt with the schedule given. Optionally, it saves the gantt in a png image
-    def print_schedule(self, filename=None):
+    def print(self, filename=None):
         
         # parameters of the graphic
         tick_starting_at = 10
@@ -68,10 +90,9 @@ class Schedule():
         font_height = 1
 
         # palette of light colors
-        colors = ['red','lime','deepskyblue','bisque','mintcream','royalblue''sandybrown','palegreen','pink','violet','cyan','darkseagreen','gold']
+        colors = ['red','lime','deepskyblue','bisque','mintcream','royalblue','sandybrown','palegreen','pink','violet','cyan','darkseagreen','gold']
 
-        # compute number of jobs and machines
-        jobs = list(set([task.job for task in self.task_list]))
+        # compute number of machines
         machines = set([task.machine for task in self.task_list])
 
         # create gantt
@@ -87,13 +108,13 @@ class Schedule():
 
         # ticks labels (y)
         gantt.set_yticks([tick_starting_at + tick_separation *i + task_height/2 for i in range(len(machines))])
-        gantt.set_yticklabels(['M'+str(i) for i in range(len(machines))])
+        gantt.set_yticklabels(['M'+str(i) for i in range(len(machines)-1,-1,-1)])
 
         # populate the gantt
-        for job in jobs:
+        for job in self.job_order:
 
             # get the tasks associated to the job
-            tasks_job = [[[(task.st, task.ct-task.st)],(tick_starting_at + tick_separation * task.machine, task_height)] for task in self.task_list if task.job == job]
+            tasks_job = [[[(task.st, task.ct-task.st)],(tick_starting_at + tick_separation * (len(machines) - task.machine - 1), task_height)] for task in self.task_list if task.job == job]
 
             # prints the rectangle and the text
             for task in tasks_job:
@@ -297,6 +318,21 @@ class Instance(ABC):
             else:
                 print_tag("R", self.r)
 
+    # abtsract method to create a schedule. This method is implemented by the children clasess
+    @abstractmethod
+    def create_schedule(self, solution):
+        pass
+
+    # method to write a schedule in a file
+    def write_schedule(self, solution, filename):
+        gantt = self.create_schedule(solution)
+        gantt.save(filename)
+
+    # method to print (console) a schedule. Optionally it can be printed into a png file
+    def print_schedule(self, solution, filename=None):
+        gantt = self.create_schedule(solution)
+        gantt.print(filename)
+
 
 
 # class to implement the single machine layout
@@ -355,27 +391,22 @@ class SingleMachine(Instance):
     def random_solution(self):
         return random_sequence(self.jobs)
 
-   # implementation of write_schedule
-    def write_schedule(self, sequence, filename):
-       # delete existing schedule
-       if(os.path.exists(filename)):
-           os.remove(filename)
-       # compute completion times
-       ct = self.ct(sequence)
-       # only the jobs that are to be scheduled
-       write_tag('JOBS',len(sequence), filename)
-       write_tag('MACHINES',1, filename)
-       # schedule data matrix
-       tag_value = ''
-       for j in range(len(sequence)-1):
-           tag_value = tag_value + '0,{},{};'.format(ct[j]- self.pt[sequence[j]], self.pt[sequence[j]])
-       # last job
-       tag_value = tag_value + '0,{},{}'.format(ct[len(sequence)-1]- self.pt[sequence[len(sequence)-1]], self.pt[sequence[len(sequence)-1]])
-       write_tag('SCHEDULE_DATA', tag_value, filename)
-       write_tag('JOB_ORDER',sequence, filename)
-        # job names
-       #job_names = ['J' + str(e) for e in sequence]
-       #write_tag('JOB_NAMES',job_names, filename)         
+
+   # 
+    def create_schedule(self, sequence):
+
+        gantt = Schedule()
+
+        # compute completion times
+        ct = self.ct(sequence)     
+
+        for j, job in enumerate(sequence):
+            gantt.add_task(Task(job, 0, ct[j]- self.pt[job], ct[j]))
+
+        return gantt
+
+
+      
 
 # class to implement the flowshop layout
 class FlowShop(Instance):
@@ -461,8 +492,8 @@ class FlowShop(Instance):
         ct = [completion_time[self.machines-1][j] for j in range(len(sequence)) ]
         return ct
 
-    # implementation of print_schedule() for FlowShop
-    def print_schedule(self, sequence, filename=None):
+    # implementation of create_schedule() for FlowShop
+    def create_schedule(self, sequence):
 
        # compute completion times
        ct = self.ct(sequence)
@@ -475,36 +506,7 @@ class FlowShop(Instance):
            for machine in range(self.machines):
                gantt.add_task(Task(job,machine, ct[machine][j] - self.pt[machine][job], ct[machine][j]))
 
-       # printing the gantt
-       gantt.print_schedule(filename)
-
-
-    # implementation of write_schedule() for FlowShop
-    def write_schedule(self, sequence, filename):
-       # delete existing schedule
-       if(os.path.exists(filename)):
-           os.remove(filename)
-       # compute completion times
-       ct = self.ct(sequence)
-       # only the jobs that have to be displayed (those in the sequence)
-       write_tag('JOBS',len(sequence), filename)
-       write_tag('MACHINES',self.machines, filename)
-       # schedule data matrix
-       tag_value = ''
-       for j in range(len(sequence)-1):
-           for i in range(self.machines-1):
-                tag_value = tag_value + '{},{},{},'.format(i,ct[i][j]- self.pt[i][sequence[j]], self.pt[i][sequence[j]])
-           tag_value = tag_value + '{},{},{};'.format(self.machines-1,ct[self.machines-1][j]- self.pt[self.machines-1][sequence[j]], self.pt[self.machines-1][sequence[j]])
-       # last job
-       for i in range(self.machines-1):
-           tag_value = tag_value + '{},{},{},'.format(i,ct[i][len(sequence)-1]- self.pt[i][sequence[len(sequence)-1]], self.pt[i][sequence[len(sequence)-1]])
-       # last job in last machine 
-       tag_value = tag_value + '{},{},{}'.format(self.machines-1,ct[self.machines-1][len(sequence)-1]- self.pt[self.machines-1][sequence[len(sequence)-1]], self.pt[self.machines-1][sequence[len(sequence)-1]])
-       write_tag('SCHEDULE_DATA', tag_value, filename)
-       write_tag('JOB_ORDER',sequence, filename)
-       # job names
-       #job_names = ['J' + str(e) for e in sequence]
-       #write_tag('JOB_NAMES',job_names, filename)
+       return gantt
 
 
 
@@ -585,38 +587,29 @@ class ParallelMachines(Instance):
    def random_solution(self):
         return random_sequence(self.jobs)
 
-    # implementation of write_schedule() for ParallelMachines
-   def write_schedule(self, sequence, filename):
-       # delete existing schedule
-       if(os.path.exists(filename)):
-           os.remove(filename)
-       # compute completion times
-       ct = self.ct(sequence)
-       # only the jobs that have to be displayed (those in the sequence)
-       write_tag('JOBS',len(sequence), filename)
-       write_tag('MACHINES',self.machines, filename)
-       # schedule data matrix
-       tag_value = ''
 
-        # initializing completion times in the machines to zero
-       ct_machines = [0 for i in range(self.machines)]
+    # implementation of create_schedule() for ParallelMachines
+   def create_schedule(self, sequence):
 
-        # write data for each job in the sequence
-       for j,job in enumerate(sequence):
+       # create the schedule
+       gantt = Schedule() 
+
+       # initializing completion times in the machines to zero
+       ct_machines = [0 for i in range(self.machines)]       
+
+       # adding all tasks
+       for job in sequence:
+
             # assign the job to the machine finishing first
             index_machine = find_index_min(ct_machines)
             # increases the completion time of the corresponding machine (and sets the completion time of the job)
             ct_machines[index_machine] = max(ct_machines[index_machine], self.r[job]) + self.pt[job]
+            # add the task
+            gantt.add_task(Task(job, index_machine, ct_machines[index_machine] - self.pt[job], ct_machines[index_machine]))
 
-            tag_value = tag_value + '{},{},{}'.format(index_machine, ct_machines[index_machine] - self.pt[job], self.pt[job])
-            if(j != len(sequence)-1):
-                tag_value = tag_value + ";"
+       return gantt        
 
-       write_tag('SCHEDULE_DATA', tag_value, filename)
-       write_tag('JOB_ORDER',sequence, filename)
-       # job names
-       #job_names = ['J' + str(e) for e in sequence]
-       #write_tag('JOB_NAMES',job_names, filename)
+
 
 
 
@@ -699,41 +692,33 @@ class UnrelatedMachines(Instance):
         return random_sequence(self.jobs)
 
 
-    # implementation of write_schedule() for UnrelatedMachines
-   def write_schedule(self, sequence, filename):
-       # delete existing schedule
-       if(os.path.exists(filename)):
-           os.remove(filename)
-       # compute completion times
-       ct = self.ct(sequence)
-       # only the jobs that have to be displayed (those in the sequence)
-       write_tag('JOBS',len(sequence), filename)
-       write_tag('MACHINES',self.machines, filename)
-       # schedule data matrix
-       tag_value = ''
+    # implementation of create_schedule() for UnrelatedMachines
+   def create_schedule(self, sequence):
 
-        # initializing completion times in the machines to zero
-       ct_machines = [0 for i in range(self.machines)]
+       # create the schedule
+       gantt = Schedule() 
 
-        # write data for each job in the sequence
-       for j,job in enumerate(sequence):
+       # initializing completion times in the machines to zero
+       ct_machines = [0 for i in range(self.machines)]       
+
+       # adding all tasks
+       for job in sequence:
+
             # construct what completion times would be if the job is assigned to each machine
             next_ct = [max(ct_machines[i],self.r[job]) + self.pt[i][job] for i in range(self.machines)]
 
             # assign the job to the machine finishing first
             index_machine = find_index_min(next_ct)
+
             # increases the completion time of the corresponding machine (and sets the completion time of the job)
-            ct_machines[index_machine] = max(ct_machines[index_machine], self.r[job]) + self.pt[job]
+            ct_machines[index_machine] = max(ct_machines[index_machine], self.r[job]) + self.pt[index_machine][job]            
 
-            tag_value = tag_value + '{},{},{}'.format(index_machine, ct_machines[index_machine] - self.pt[job], self.pt[job])
-            if(j != len(sequence)-1):
-                tag_value = tag_value + ";"
+            # add the task
+            gantt.add_task(Task(job, index_machine, ct_machines[index_machine] - self.pt[index_machine][job], ct_machines[index_machine]))
 
-       write_tag('SCHEDULE_DATA', tag_value, filename)
-       write_tag('JOB_ORDER',sequence, filename)
-       # job names
-       #job_names = ['J' + str(e) for e in sequence]
-       #write_tag('JOB_NAMES',job_names, filename)        
+       return gantt     
+
+  
 
 
 class JobShop(Instance):
@@ -889,36 +874,28 @@ class JobShop(Instance):
                 curr_op = curr_op + 1
         return solution
 
-    # implementation of write_schedule() for JobShop
-     def write_schedule(self, sequence, filename):
-       # delete existing schedule
-       if(os.path.exists(filename)):
-           os.remove(filename)
+
+    # implementation of create_schedule() for JobShop
+     def create_schedule(self, sequence):
+
+       # create the schedule
+       gantt = Schedule() 
+
        # compute completion times
        ct = self.ct(sequence)
+       
        # get jobs involved
        jobs_involved = list(set(sequence))
-       # only the jobs that have to be displayed (those in the sequence)
-       write_tag('JOBS',len(jobs_involved), filename)
-       write_tag('MACHINES',self.machines, filename)
-       # schedule data matrix
-       tag_value = ''
-       for j in range(len(jobs_involved)-1):
+
+       # adding tasks
+       for j in range(len(jobs_involved)):
            for i in range(self.machines):
                mach = self.rt[jobs_involved[j]][i]
-               tag_value = tag_value + "{},{},{}".format(mach,ct[mach][j] - self.pt[mach][jobs_involved[j]],self.pt[mach][jobs_involved[j]])        
-               if(i < self.machines-1):
-                   tag_value = tag_value + ","
-               else:
-                   tag_value = tag_value + ";"
-       # last job
-       for i in range(self.machines):
-           mach = self.rt[jobs_involved[len(jobs_involved)-1]][i]
-           tag_value = tag_value + "{},{},{}".format(mach,ct[mach][len(jobs_involved)-1] - self.pt[mach][jobs_involved[len(jobs_involved)-1]],self.pt[mach][jobs_involved[len(jobs_involved)-1]])        
-           if(i < self.machines-1):
-                tag_value = tag_value + ","
-       write_tag('SCHEDULE_DATA', tag_value, filename)
-       write_tag('JOB_ORDER',jobs_involved, filename)
+               gantt.add_task(Task(jobs_involved[j], mach, ct[mach][j] - self.pt[mach][jobs_involved[j]], ct[mach][j]))
+
+       return gantt     
+
+
 
 
 class OpenShop(Instance):
@@ -1020,18 +997,15 @@ class OpenShop(Instance):
  
         return [max(e) for e in ct_transposed]
 
-    # implementation of write_schedule() for the OpenShop
-    def write_schedule(self, sequence, filename):
-       # delete existing schedule
-       if(os.path.exists(filename)):
-           os.remove(filename)
-       # compute completion times
+
+    # implementation of create_schedule() for OpenShop
+    def create_schedule(self, sequence):
+
+       # create the schedule
+       gantt = Schedule() 
+
+      # compute completion times
        ct = self.ct(sequence)
-       # only the jobs that have to be displayed (those in the sequence)
-       write_tag('JOBS',self.jobs, filename)
-       write_tag('MACHINES',self.machines, filename)
-       # schedule data matrix
-       tag_value = ''
 
        # determine job order in the sequence
        job_order = []
@@ -1056,17 +1030,12 @@ class OpenShop(Instance):
            # sort the machines in increasing order
            machines_sorted = sorted_index_asc(job)
            ct_sorted = sorted_value_asc(job)
-           print(machines_sorted)
            for index in range(len(job)):
-               tag_value = tag_value + '{},{},{}'.format(machines_sorted[index],ct_sorted[index]- self.pt[machines_sorted[index]][job_order[j]], self.pt[machines_sorted[index]][job_order[j]])           
-               if(index == self.machines-1):
-                   if(j != self.jobs-1):
-                        tag_value = tag_value + ";"
-               else:
-                    tag_value = tag_value + ","
+               gantt.add_task( Task(job_order[j], machines_sorted[index], ct_sorted[index]- self.pt[machines_sorted[index]][job_order[j]], ct_sorted[index]) )
 
-       write_tag('SCHEDULE_DATA', tag_value, filename)
-       write_tag('JOB_ORDER',job_order, filename)    
+       return gantt 
+
+   
 
 
 

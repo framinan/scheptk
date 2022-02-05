@@ -7,13 +7,13 @@ requirements = ["ipython>=6", "nbformat>=4", "nbconvert>=5", "requests>=2"]
 
 setup(
     name="scheptk",
-    version="0.0.1",
+    version="0.0.3",
     author="Jose M Framinan",
     author_email="framinan@us.es",
     description="Python scheduling package",
     long_description=readme,
     long_description_content_type="text/markdown",
-    #url="https://github.com/your_package/homepage/",
+    url="https://github.com/framinan/scheptk",
     packages=find_packages(),
     install_requires=requirements,
     classifiers=[

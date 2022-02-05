@@ -2,6 +2,7 @@ README.md
 setup.py
 scheptk/__init__.py
 scheptk/scheptk.py
+scheptk/util.py
 scheptk.egg-info/PKG-INFO
 scheptk.egg-info/SOURCES.txt
 scheptk.egg-info/dependency_links.txt
