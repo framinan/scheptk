@@ -1018,6 +1018,9 @@ class OpenShop(Instance):
            if(job_order.count(decoded_job) == 0):
                 job_order.append(decoded_job)
 
+       print("JOb order is ", end='')
+       print(job_order)
+
        # transpose the completion times
        ct_transposed = []
        for j in range(self.jobs):
@@ -1026,12 +1029,23 @@ class OpenShop(Instance):
                 transposed_row.append(ct[i][j])
             ct_transposed.append(transposed_row)
 
-       for j,job in enumerate(ct_transposed):
-           # sort the machines in increasing order
-           machines_sorted = sorted_index_asc(job)
-           ct_sorted = sorted_value_asc(job)
-           for index in range(len(job)):
-               gantt.add_task( Task(job_order[j], machines_sorted[index], ct_sorted[index]- self.pt[machines_sorted[index]][job_order[j]], ct_sorted[index]) )
+       print(ct_transposed)
+
+       for job in job_order:
+            # sort the machines in increasing order
+           machines_sorted = sorted_index_asc(ct_transposed[job])
+           ct_sorted = sorted_value_asc(ct_transposed[job]) 
+           for index in range(self.machines):
+               gantt.add_task( Task(job, machines_sorted[index], ct_sorted[index] - self.pt[machines_sorted[index]][job],ct_sorted[index]  ) )         
+
+    #    for j,job in enumerate(ct_transposed):
+    #        # sort the machines in increasing order
+    #        machines_sorted = sorted_index_asc(job)
+    #        ct_sorted = sorted_value_asc(job)
+    #        print(machines_sorted)
+    #        print(ct_sorted)
+    #        for index in range(len(job)):
+    #            gantt.add_task( Task(job_order[j], machines_sorted[index], ct_sorted[index]- self.pt[machines_sorted[index]][job_order[j]], ct_sorted[index]) )
 
        return gantt 
 
