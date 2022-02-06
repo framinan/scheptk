@@ -1,10 +1,10 @@
 ## `scheptk` - Scheduling Python ToolKit
 
-`scheptk` is a collection of classes and functions to model and solve machine scheduling problems. It is intended basically for teaching purposes, even if the algorithms can be integrated with MOIST, a more advanced scheduling tool.
+`scheptk` is a collection of classes and functions to model and solve machine scheduling problems using Python. It is intended basically for teaching purposes, even if the algorithms can be integrated with MOIST, a more advanced scheduling tool.
 
 # How to use it
 
-In order to use `scheptk` you can install it as a package using `pip`:
+In order to use `scheptk` you can install it as a Python package using `pip`:
 
 `pip install scheptk`
 
