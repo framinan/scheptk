@@ -127,7 +127,7 @@ class Schedule():
 
 
 
-class Instance(ABC):
+class Model(ABC):
  
     # basic data, common to all layouts
     def __init__(self):
@@ -155,27 +155,43 @@ class Instance(ABC):
     def Cmax(self, sequence):
         return max(self.Cj(sequence))
 
-    # max earliness
-    def Emax(self, sequence):
+    #  earliness of all jobs
+    def Ej(self, sequence):
          if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")        
-         return max([ max(self.dd[sequence[index]] - item,0) for index,item in enumerate(self.Cj(sequence))])
+         return [ max(self.dd[sequence[index]] - item,0) for index,item in enumerate(self.Cj(sequence))]
+
+    # max earliness
+    def Emax(self, sequence):    
+         return max(self.Lj(sequence)) 
+
+   #  flowtime de cada uno de los trabajos
+    def Fj(self, sequence):
+        return [item - self.r[sequence[index]] for index,item in enumerate(self.Cj(sequence))]         
 
    # max flowtime
     def Fmax(self, sequence):
-        return max([item - self.r[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
+        return max( self.Fj(sequence))
         
+    # lateness of all jobs in the sequence
+    def Lj(self, sequence):
+        if(self.dd == -1):
+            print("The instance does not have due dates and due-date related objective cannot be computed.")        
+        return [item - self.dd[sequence[index]] for index,item in enumerate(self.Cj(sequence))]
+
     # max lateness
     def Lmax(self, sequence):
+        return max(self.Lj(sequence))
+
+    # tardiness of all jobs
+    def Tj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return max([ item - self.dd[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
+        return [ max(item - self.dd[sequence[index]],0) for index,item in enumerate(self.Cj(sequence))]
 
     # max tardiness
     def Tmax(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return max([ max(item - self.dd[sequence[index]],0) for index,item in enumerate(self.Cj(sequence))])
+        return max(self.Tj(sequence))
 
     # sum of completion tme
     def SumCj(self, sequence):
@@ -183,31 +199,23 @@ class Instance(ABC):
 
     # sum earliness
     def SumEj(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")        
-        return sum([ max(self.dd[sequence[index]] - item,0) for index,item in enumerate(self.Cj(sequence))])
+        return sum(self.Ej(sequence))
 
    # sum flowtime
     def SumFj(self, sequence):
-        return sum([item - self.r[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
+        return sum(self.Fj(sequence))
 
     # sum lateness
     def SumLj(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([ item - self.dd[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
+        return sum( self.Lj(sequence))
 
     # sum tardiness
     def SumTj(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([ max(item - self.dd[sequence[index]],0) for index,item in enumerate(self.Cj(sequence))])           
+        return sum( self.Tj(sequence))           
 
     # sum of tardy jobs
     def SumUj(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([1 if (item - self.dd[sequence[index]]) > 0 else 0 for index,item in enumerate(self.Cj(sequence))])
+        return sum( self.Uj(sequence))
 
     # weighted makespan
     def WjCmax(self, sequence):
@@ -266,6 +274,10 @@ class Instance(ABC):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
         return sum([1 if (item - self.dd[sequence[index]]) > 0 else 0 for index,item in enumerate(self.Cj(sequence))])
+
+    # vector of tardy jobs: 1 if the job is tardy, 0 otherwise
+    def Uj(self, sequence):
+        return [1 if t >0 else 0 for t in self.Tj(sequence)]
 
 
     # other methods to check data that are implemented in all children
@@ -336,7 +348,7 @@ class Instance(ABC):
 
 
 # class to implement the single machine layout
-class SingleMachine(Instance):
+class SingleMachine(Model):
      
     def __init__(self, filename):
 
@@ -409,7 +421,7 @@ class SingleMachine(Instance):
       
 
 # class to implement the flowshop layout
-class FlowShop(Instance):
+class FlowShop(Model):
  
     def __init__(self, filename):
 
@@ -511,7 +523,7 @@ class FlowShop(Instance):
 
 
 # identical parallel machines
-class ParallelMachines(Instance):
+class ParallelMachines(Model):
    def __init__(self, filename):
 
         # initializing additional data (not basic)
@@ -613,7 +625,7 @@ class ParallelMachines(Instance):
 
 
 
-class UnrelatedMachines(Instance):
+class UnrelatedMachines(Model):
    def __init__(self, filename):
 
         # initializing additional data (not basic)
@@ -721,7 +733,7 @@ class UnrelatedMachines(Instance):
   
 
 
-class JobShop(Instance):
+class JobShop(Model):
      def __init__(self, filename):
 
         # initializing additional data (not basic)
@@ -898,7 +910,7 @@ class JobShop(Instance):
 
 
 
-class OpenShop(Instance):
+class OpenShop(Model):
 
     def __init__(self, filename):
 
