@@ -5,8 +5,6 @@ import operator # for sorted functions
 import matplotlib.pyplot as plt
 from random import randint # random solutions
 
-#from importlib_metadata import method_cache 
-
 from scheptk.util import random_sequence, read_tag, find_index_min, print_tag, sorted_index_asc, sorted_value_asc, sorted_value_desc, write_tag
 
 
