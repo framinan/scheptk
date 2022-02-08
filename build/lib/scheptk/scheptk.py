@@ -5,8 +5,6 @@ import operator # for sorted functions
 import matplotlib.pyplot as plt
 from random import randint # random solutions
 
-#from importlib_metadata import method_cache 
-
 from scheptk.util import random_sequence, read_tag, find_index_min, print_tag, sorted_index_asc, sorted_value_asc, sorted_value_desc, write_tag
 
 
@@ -127,7 +125,7 @@ class Schedule():
 
 
 
-class Instance(ABC):
+class Model(ABC):
  
     # basic data, common to all layouts
     def __init__(self):
@@ -138,44 +136,72 @@ class Instance(ABC):
         self.r = [] # release dates
     
     # abstract method completion times
-    @abstractmethod
-    def Cj(self, sequence):
-        pass
+    # @abstractmethod
+    # def Cj(self, sequence):
+    #     pass
 
     @abstractmethod
     def ct(self, sequence):
         pass
  
    # abstract method generates a random solution for the instance
-    @abstractmethod
-    def random_solution(self):
-        pass
+    # @abstractmethod
+    # def random_solution(self):
+    #     pass
  
+    # concrete method: it returns the completion time of each job in the sequence 
+    # it is a bit tricky so it can support different codifications of the solutions in each layout
+    def Cj(instance, seq):
+
+        ct, job_order = instance.ct(seq)
+        # it is done with len(ct[0]) in order to support JobShop and OpenShop, because len(seq) is different than the number of jobs in ct
+        # and it is done with len(ct) instead of machines to support SingleMachine
+        Cj = [max([ct[i][j] for i in range(len(ct))]) for j in range(len(job_order))]
+    
+        return Cj
+
+
     # concrete method makespan
     def Cmax(self, sequence):
         return max(self.Cj(sequence))
 
-    # max earliness
-    def Emax(self, sequence):
+    #  earliness of all jobs
+    def Ej(self, sequence):
          if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")        
-         return max([ max(self.dd[sequence[index]] - item,0) for index,item in enumerate(self.Cj(sequence))])
+         return [ max(self.dd[sequence[index]] - item,0) for index,item in enumerate(self.Cj(sequence))]
+
+    # max earliness
+    def Emax(self, sequence):    
+         return max(self.Lj(sequence)) 
+
+   #  flowtime de cada uno de los trabajos
+    def Fj(self, sequence):
+        return [item - self.r[sequence[index]] for index,item in enumerate(self.Cj(sequence))]         
 
    # max flowtime
     def Fmax(self, sequence):
-        return max([item - self.r[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
+        return max( self.Fj(sequence))
         
+    # lateness of all jobs in the sequence
+    def Lj(self, sequence):
+        if(self.dd == -1):
+            print("The instance does not have due dates and due-date related objective cannot be computed.")        
+        return [item - self.dd[sequence[index]] for index,item in enumerate(self.Cj(sequence))]
+
     # max lateness
     def Lmax(self, sequence):
+        return max(self.Lj(sequence))
+
+    # tardiness of all jobs
+    def Tj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return max([ item - self.dd[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
+        return [ max(item - self.dd[sequence[index]],0) for index,item in enumerate(self.Cj(sequence))]
 
     # max tardiness
     def Tmax(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return max([ max(item - self.dd[sequence[index]],0) for index,item in enumerate(self.Cj(sequence))])
+        return max(self.Tj(sequence))
 
     # sum of completion tme
     def SumCj(self, sequence):
@@ -183,31 +209,23 @@ class Instance(ABC):
 
     # sum earliness
     def SumEj(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")        
-        return sum([ max(self.dd[sequence[index]] - item,0) for index,item in enumerate(self.Cj(sequence))])
+        return sum(self.Ej(sequence))
 
    # sum flowtime
     def SumFj(self, sequence):
-        return sum([item - self.r[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
+        return sum(self.Fj(sequence))
 
     # sum lateness
     def SumLj(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([ item - self.dd[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
+        return sum( self.Lj(sequence))
 
     # sum tardiness
     def SumTj(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([ max(item - self.dd[sequence[index]],0) for index,item in enumerate(self.Cj(sequence))])           
+        return sum( self.Tj(sequence))           
 
     # sum of tardy jobs
     def SumUj(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([1 if (item - self.dd[sequence[index]]) > 0 else 0 for index,item in enumerate(self.Cj(sequence))])
+        return sum( self.Uj(sequence))
 
     # weighted makespan
     def WjCmax(self, sequence):
@@ -267,6 +285,10 @@ class Instance(ABC):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
         return sum([1 if (item - self.dd[sequence[index]]) > 0 else 0 for index,item in enumerate(self.Cj(sequence))])
 
+    # vector of tardy jobs: 1 if the job is tardy, 0 otherwise
+    def Uj(self, sequence):
+        return [1 if t >0 else 0 for t in self.Tj(sequence)]
+
 
     # other methods to check data that are implemented in all children
     def check_duedates(self, filename):
@@ -318,10 +340,51 @@ class Instance(ABC):
             else:
                 print_tag("R", self.r)
 
-    # abtsract method to create a schedule. This method is implemented by the children clasess
-    @abstractmethod
+    #  method to create a schedule. This method is implemented by the children clasess
+    # The method is a bit tricky to treat the case of a single machine and parallel machines (which is not ideal for a parent class :-( )),
+    #  as in this case it is not usual to use a matrix for the processing times
     def create_schedule(self, solution):
-        pass
+
+        # tricky part to treat properly the single machine and the identical machine case
+        # in the processing times are a list 
+        if not isinstance(self.pt[0],list):
+            # it can be parallel machines or single machine
+            if not hasattr(self, 'machines'):
+                # single machine
+                pt = [self.pt]
+            else:
+                # parallel machines
+                pt = [self.pt for i in range(self.machines)]
+        else:
+            # in the rest of the cases, it is already a list of lists
+            pt = self.pt          
+
+
+        # if not hasattr(self, 'machines') and :
+        #     # then there is a single machine and the list has to be converted into a list of lists
+        #     pt = [self.pt]
+        # else:
+        #     # parallel machine case: self.pt is a list but there are several identical machines
+        #     if not isinstance(self.pt[0],list):
+        #         pt = [self.pt for i in range(self.machines)]
+        #     else:
+        #         # in the rest of the cases, it is already a list of lists
+        #         pt = self.pt
+
+
+        gantt = Schedule()
+        ct, job_order = self.ct(solution)
+        for j, job in enumerate(job_order):
+            for mach in range(len(ct)):
+                # if ct not zero (some ct may be zero, check ParallelMachine)
+                if(ct[mach][j]!= 0):
+                    # add the task    
+                    gantt.add_task(Task(job, mach, ct[mach][j] - pt[mach][job], ct[mach][j]))
+                
+        return gantt
+                    
+
+
 
     # method to write a schedule in a file
     def write_schedule(self, solution, filename):
@@ -336,7 +399,7 @@ class Instance(ABC):
 
 
 # class to implement the single machine layout
-class SingleMachine(Instance):
+class SingleMachine(Model):
      
     def __init__(self, filename):
 
@@ -380,12 +443,12 @@ class SingleMachine(Instance):
         completion_time.append(self.r[sequence[0]] + self.pt[sequence[0]])
         for i in range(1,len(sequence)):
             completion_time.append(max(completion_time[i-1],self.r[sequence[i]]) + self.pt[sequence[i]])
-        return completion_time
+        return [completion_time], sequence
 
     # implementation of Cj
     # for the SingleMachine there is no difference between ct and Cj
-    def Cj(self,sequence):
-        return self.ct(sequence)
+    # def Cj(self,sequence):
+    #     return self.ct(sequence)
    
     # implementation of random_solution()
     def random_solution(self):
@@ -393,23 +456,23 @@ class SingleMachine(Instance):
 
 
    # 
-    def create_schedule(self, sequence):
+    # def create_schedule(self, sequence):
 
-        gantt = Schedule()
+    #     gantt = Schedule()
 
-        # compute completion times
-        ct = self.ct(sequence)     
+    #     # compute completion times
+    #     ct = self.ct(sequence)     
 
-        for j, job in enumerate(sequence):
-            gantt.add_task(Task(job, 0, ct[j]- self.pt[job], ct[j]))
+    #     for j, job in enumerate(sequence):
+    #         gantt.add_task(Task(job, 0, ct[j]- self.pt[job], ct[j]))
 
-        return gantt
+    #     return gantt
 
 
       
 
 # class to implement the flowshop layout
-class FlowShop(Instance):
+class FlowShop(Model):
  
     def __init__(self, filename):
 
@@ -482,21 +545,21 @@ class FlowShop(Instance):
         for i in range(1, self.machines):
             for j in range(1, len(sequence)):
                 completion_time[i][j] = max(completion_time[i-1][j], completion_time[i][j-1]) + self.pt[i][sequence[j]]  
-        return completion_time     
+        return completion_time, sequence     
 
     # implementation of completion times for FlowShop
-    def Cj(self, sequence):
-        # call function to compute the completion time of each job on each machine
-        completion_time = self.ct(sequence)
-        # computing completion times of each job
-        ct = [completion_time[self.machines-1][j] for j in range(len(sequence)) ]
-        return ct
+    # def Cj(self, sequence):
+    #     # call function to compute the completion time of each job on each machine
+    #     completion_time = self.ct(sequence)
+    #     # computing completion times of each job
+    #     ct = [completion_time[self.machines-1][j] for j in range(len(sequence)) ]
+    #     return ct
 
     # implementation of create_schedule() for FlowShop
-    def create_schedule(self, sequence):
+    def create_schedule_old(self, sequence):
 
        # compute completion times
-       ct = self.ct(sequence)
+       ct, job_order = self.ct(sequence)
 
        # create the schedule
        gantt = Schedule() 
@@ -506,12 +569,14 @@ class FlowShop(Instance):
            for machine in range(self.machines):
                gantt.add_task(Task(job,machine, ct[machine][j] - self.pt[machine][job], ct[machine][j]))
 
+       gantt.print()
+
        return gantt
 
 
 
 # identical parallel machines
-class ParallelMachines(Instance):
+class ParallelMachines(Model):
    def __init__(self, filename):
 
         # initializing additional data (not basic)
@@ -565,22 +630,22 @@ class ParallelMachines(Instance):
 
         # initializing completion times in the machines to zero
         ct_machines = [0 for i in range(self.machines)]
-        completion_times = [0 for j in range(len(sequence))]
-
+        ct = [[0 for j in range(len(sequence))] for i in range(self.machines)]
+        
         # assign all jobs
         for j in range(len(sequence)):
             # assign the job to the machine finishing first
             index_machine = find_index_min(ct_machines)
             # increases the completion time of the corresponding machine (and sets the completion time of the job)
             ct_machines[index_machine] = max(ct_machines[index_machine], self.r[sequence[j]]) + self.pt[sequence[j]]
-            completion_times[sequence[j]] = ct_machines[index_machine]
+            ct[index_machine][j] = ct_machines[index_machine]
     
-        return completion_times
+        return ct, sequence        
 
     # implementation of completion times for the jobs. In this layout is the same as ct
-   def Cj(self, sequence):
+#    def Cj(self, sequence):
     
-        return self.ct(sequence)
+#         return self.ct(sequence)
 
 
     # implementation of random_solution()
@@ -588,32 +653,33 @@ class ParallelMachines(Instance):
         return random_sequence(self.jobs)
 
 
-    # implementation of create_schedule() for ParallelMachines
-   def create_schedule(self, sequence):
+#     # implementation of create_schedule() for ParallelMachines
+#    def create_schedule_old(self, sequence):
 
-       # create the schedule
-       gantt = Schedule() 
+#        # create the schedule
+#        gantt = Schedule() 
 
-       # initializing completion times in the machines to zero
-       ct_machines = [0 for i in range(self.machines)]       
+#        # initializing completion times in the machines to zero
+#        ct_machines = [0 for i in range(self.machines)]       
 
-       # adding all tasks
-       for job in sequence:
+#        # adding all tasks
+#        for job in sequence:
 
-            # assign the job to the machine finishing first
-            index_machine = find_index_min(ct_machines)
-            # increases the completion time of the corresponding machine (and sets the completion time of the job)
-            ct_machines[index_machine] = max(ct_machines[index_machine], self.r[job]) + self.pt[job]
-            # add the task
-            gantt.add_task(Task(job, index_machine, ct_machines[index_machine] - self.pt[job], ct_machines[index_machine]))
+#             # assign the job to the machine finishing first
+#             index_machine = find_index_min(ct_machines)
+#             # increases the completion time of the corresponding machine (and sets the completion time of the job)
+#             ct_machines[index_machine] = max(ct_machines[index_machine], self.r[job]) + self.pt[job]
+#             # add the task
+#             gantt.add_task(Task(job, index_machine, ct_machines[index_machine] - self.pt[job], ct_machines[index_machine]))
 
-       return gantt        
-
-
-
+#        gantt.print()
+#        return gantt        
 
 
-class UnrelatedMachines(Instance):
+
+
+
+class UnrelatedMachines(Model):
    def __init__(self, filename):
 
         # initializing additional data (not basic)
@@ -669,7 +735,7 @@ class UnrelatedMachines(Instance):
 
         # initializing completion times in the machines to zero
         ct_machines = [0 for i in range(self.machines)]
-        completion_times = [0 for j in range(len(sequence))]
+        ct = [[0 for j in range(len(sequence))] for i in range(self.machines)]
 
         # assign all jobs
         for j in range(len(sequence)):
@@ -679,13 +745,15 @@ class UnrelatedMachines(Instance):
             index_machine = find_index_min(next_ct)
             # increases the completion time of the corresponding machine (and sets the completion time of the job)
             ct_machines[index_machine] = max(ct_machines[index_machine], self.r[sequence[j]]) + self.pt[index_machine][sequence[j]]
-            completion_times[sequence[j]] = ct_machines[index_machine]
+            ct[index_machine][sequence[j]] = ct_machines[index_machine]
     
-        return completion_times
+        return ct, sequence
 
-   def Cj(self, sequence):
+   
+   
+#    def Cj(self, sequence):
     
-        return self.ct(sequence)
+#         return self.ct(sequence)
 
     # implementation of random_solution()
    def random_solution(self):
@@ -693,35 +761,35 @@ class UnrelatedMachines(Instance):
 
 
     # implementation of create_schedule() for UnrelatedMachines
-   def create_schedule(self, sequence):
+#    def create_schedule(self, sequence):
 
-       # create the schedule
-       gantt = Schedule() 
+#        # create the schedule
+#        gantt = Schedule() 
 
-       # initializing completion times in the machines to zero
-       ct_machines = [0 for i in range(self.machines)]       
+#        # initializing completion times in the machines to zero
+#        ct_machines = [0 for i in range(self.machines)]       
 
-       # adding all tasks
-       for job in sequence:
+#        # adding all tasks
+#        for job in sequence:
 
-            # construct what completion times would be if the job is assigned to each machine
-            next_ct = [max(ct_machines[i],self.r[job]) + self.pt[i][job] for i in range(self.machines)]
+#             # construct what completion times would be if the job is assigned to each machine
+#             next_ct = [max(ct_machines[i],self.r[job]) + self.pt[i][job] for i in range(self.machines)]
 
-            # assign the job to the machine finishing first
-            index_machine = find_index_min(next_ct)
+#             # assign the job to the machine finishing first
+#             index_machine = find_index_min(next_ct)
 
-            # increases the completion time of the corresponding machine (and sets the completion time of the job)
-            ct_machines[index_machine] = max(ct_machines[index_machine], self.r[job]) + self.pt[index_machine][job]            
+#             # increases the completion time of the corresponding machine (and sets the completion time of the job)
+#             ct_machines[index_machine] = max(ct_machines[index_machine], self.r[job]) + self.pt[index_machine][job]            
 
-            # add the task
-            gantt.add_task(Task(job, index_machine, ct_machines[index_machine] - self.pt[index_machine][job], ct_machines[index_machine]))
+#             # add the task
+#             gantt.add_task(Task(job, index_machine, ct_machines[index_machine] - self.pt[index_machine][job], ct_machines[index_machine]))
 
-       return gantt     
+#        return gantt     
 
   
 
 
-class JobShop(Instance):
+class JobShop(Model):
      def __init__(self, filename):
 
         # initializing additional data (not basic)
@@ -809,7 +877,6 @@ class JobShop(Instance):
 
        # completion time of each job on each machine
        ct = [[0 for j in range(len(jobs_involved))] for i in range(self.machines)]
-       print(self.rt)
 
        # number of operations completed by each job (initially zero)
        n_ops_jobs = [0 for j in range(len(jobs_involved))]
@@ -831,34 +898,34 @@ class JobShop(Instance):
            # update number of operations for the job
            n_ops_jobs[jobs_involved.index(job)] += 1
 
-       return ct
+       return ct, jobs_involved
 
-     def Cj(self, sequence):
-       # get the jobs involved in the sequence (it can be a partial sequence)
-       jobs_involved = list(set(sequence))
+    #  def Cj(self, sequence):
+    #    # get the jobs involved in the sequence (it can be a partial sequence)
+    #    jobs_involved = list(set(sequence))
 
-       # completion times of jobs and machines
-       ct_jobs = [self.r[jobs_involved[j]] for j in range(len(jobs_involved))]
-       ct_machines = [0 for i in range(self.machines)]  
+    #    # completion times of jobs and machines
+    #    ct_jobs = [self.r[jobs_involved[j]] for j in range(len(jobs_involved))]
+    #    ct_machines = [0 for i in range(self.machines)]  
 
-       # number of operations completed by each job (initially zero)
-       n_ops_jobs = [0 for j in range(len(jobs_involved))]
+    #    # number of operations completed by each job (initially zero)
+    #    n_ops_jobs = [0 for j in range(len(jobs_involved))]
 
-       for job in sequence:
-           # determine the corresponding machine
-           machine = self.rt[job][n_ops_jobs[job]]
+    #    for job in sequence:
+    #        # determine the corresponding machine
+    #        machine = self.rt[job][n_ops_jobs[job]]
 
-           # compute completion time
-           curr_completion_time = max(ct_jobs[job], ct_machines[machine]) + self.pt[machine][job]
+    #        # compute completion time
+    #        curr_completion_time = max(ct_jobs[job], ct_machines[machine]) + self.pt[machine][job]
 
-           # update completion times
-           ct_jobs[job] = curr_completion_time
-           ct_machines[machine] = curr_completion_time
+    #        # update completion times
+    #        ct_jobs[job] = curr_completion_time
+    #        ct_machines[machine] = curr_completion_time
 
-           # update number of operations for the job
-           n_ops_jobs[job] += 1
+    #        # update number of operations for the job
+    #        n_ops_jobs[job] += 1
 
-       return ct_jobs       
+    #    return ct_jobs       
     
      # implementation of a random solution of the instance
      def random_solution(self):
@@ -876,29 +943,29 @@ class JobShop(Instance):
 
 
     # implementation of create_schedule() for JobShop
-     def create_schedule(self, sequence):
+    #  def create_schedule(self, sequence):
 
-       # create the schedule
-       gantt = Schedule() 
+    #    # create the schedule
+    #    gantt = Schedule() 
 
-       # compute completion times
-       ct = self.ct(sequence)
+    #    # compute completion times
+    #    ct = self.ct(sequence)
        
-       # get jobs involved
-       jobs_involved = list(set(sequence))
+    #    # get jobs involved
+    #    jobs_involved = list(set(sequence))
 
-       # adding tasks
-       for j in range(len(jobs_involved)):
-           for i in range(self.machines):
-               mach = self.rt[jobs_involved[j]][i]
-               gantt.add_task(Task(jobs_involved[j], mach, ct[mach][j] - self.pt[mach][jobs_involved[j]], ct[mach][j]))
+    #    # adding tasks
+    #    for j in range(len(jobs_involved)):
+    #        for i in range(self.machines):
+    #            mach = self.rt[jobs_involved[j]][i]
+    #            gantt.add_task(Task(jobs_involved[j], mach, ct[mach][j] - self.pt[mach][jobs_involved[j]], ct[mach][j]))
 
-       return gantt     
-
-
+    #    return gantt     
 
 
-class OpenShop(Instance):
+
+
+class OpenShop(Model):
 
     def __init__(self, filename):
 
@@ -980,60 +1047,66 @@ class OpenShop(Instance):
 
            ct[decoded_machine][decoded_job] = curr_completion_time
 
-       return ct
+       return ct, ct_jobs
    
     # implementation of completion times for OpenShop
-    def Cj(self, sequence):
-        # call function to compute the completion time of each job on each machine
-        ct = self.ct(sequence)
+    # def Cj(self, sequence):
+    #     # call function to compute the completion time of each job on each machine
+    #     ct = self.ct(sequence)
 
-        # transpose the completion times
-        ct_transposed = []
-        for j in range(self.jobs):
-            transposed_row = []
-            for i in range(self.machines):
-                transposed_row.append(ct[i][j])
-            ct_transposed.append(transposed_row)
+    #     # transpose the completion times
+    #     ct_transposed = []
+    #     for j in range(self.jobs):
+    #         transposed_row = []
+    #         for i in range(self.machines):
+    #             transposed_row.append(ct[i][j])
+    #         ct_transposed.append(transposed_row)
  
-        return [max(e) for e in ct_transposed]
+    #     return [max(e) for e in ct_transposed]
 
 
-    # implementation of create_schedule() for OpenShop
-    def create_schedule(self, sequence):
+    # # implementation of create_schedule() for OpenShop
+    # def create_schedule(self, sequence):
 
-       # create the schedule
-       gantt = Schedule() 
+    #    # create the schedule
+    #    gantt = Schedule() 
 
-      # compute completion times
-       ct = self.ct(sequence)
+    #   # compute completion times
+    #    ct = self.ct(sequence)
 
-       # determine job order in the sequence
-       job_order = []
-       for op in sequence:
+    #    # determine job order in the sequence
+    #    job_order = []
+    #    for op in sequence:
 
-           # obtain decoded_job
-           decoded_job = op % self.jobs      
+    #        # obtain decoded_job
+    #        decoded_job = op % self.jobs      
            
-           # it not in job_order, it is a new job
-           if(job_order.count(decoded_job) == 0):
-                job_order.append(decoded_job)
+    #        # it not in job_order, it is a new job
+    #        if(job_order.count(decoded_job) == 0):
+    #             job_order.append(decoded_job)
 
-       # transpose the completion times
-       ct_transposed = []
-       for j in range(self.jobs):
-            transposed_row = []
-            for i in range(self.machines):
-                transposed_row.append(ct[i][j])
-            ct_transposed.append(transposed_row)
+    #    print("JOb order is ", end='')
+    #    print(job_order)
 
-       for j,job in enumerate(ct_transposed):
-           # sort the machines in increasing order
-           machines_sorted = sorted_index_asc(job)
-           ct_sorted = sorted_value_asc(job)
-           for index in range(len(job)):
-               gantt.add_task( Task(job_order[j], machines_sorted[index], ct_sorted[index]- self.pt[machines_sorted[index]][job_order[j]], ct_sorted[index]) )
+    #    # transpose the completion times
+    #    ct_transposed = []
+    #    for j in range(self.jobs):
+    #         transposed_row = []
+    #         for i in range(self.machines):
+    #             transposed_row.append(ct[i][j])
+    #         ct_transposed.append(transposed_row)
 
-       return gantt 
+    #    print(ct_transposed)
+
+    #    for job in job_order:
+    #         # sort the machines in increasing order
+    #        machines_sorted = sorted_index_asc(ct_transposed[job])
+    #        ct_sorted = sorted_value_asc(ct_transposed[job]) 
+    #        for index in range(self.machines):
+    #            gantt.add_task( Task(job, machines_sorted[index], ct_sorted[index] - self.pt[machines_sorted[index]][job],ct_sorted[index]  ) )         
+
+
+    #    return gantt 
 
    
 

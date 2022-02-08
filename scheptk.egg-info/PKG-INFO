@@ -2,11 +2,22 @@ Metadata-Version: 2.1
 Name: scheptk
 Version: 0.0.3
 Summary: Python scheduling package
-Home-page: UNKNOWN
+Home-page: https://github.com/framinan/scheptk
 Author: Jose M Framinan
 Author-email: framinan@us.es
 License: UNKNOWN
-Description: # scheptk
+Description: ## `scheptk` - Scheduling Python ToolKit
+        
+        `scheptk` is a collection of classes and functions to model and solve machine scheduling problems using Python. It is intended basically for teaching purposes, even if the algorithms can be integrated with MOIST, a more advanced scheduling tool.
+        
+        # How to use it
+        
+        In order to use `scheptk` you can install it as a Python package using `pip`:
+        
+        `pip install scheptk`
+        
+        At this point, the clasess and functions of `scheptk` should be available. You might want to have a look at the [wiki pages](https://github.com/framinan/scheptk/wiki) to get a handle on the documentation.
+        
         
 Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3.7
