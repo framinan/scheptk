@@ -652,7 +652,7 @@ class UnrelatedMachines(Model):
             index_machine = find_index_min(next_ct)
             # increases the completion time of the corresponding machine (and sets the completion time of the job)
             ct_machines[index_machine] = max(ct_machines[index_machine], self.r[sequence[j]]) + self.pt[index_machine][sequence[j]]
-            ct[index_machine][sequence[j]] = ct_machines[index_machine]
+            ct[index_machine][j] = ct_machines[index_machine]
     
         return ct, sequence
 
