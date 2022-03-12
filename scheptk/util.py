@@ -69,7 +69,8 @@ def read_tag(filename, tag):
             # create the proper data structure
             # scalar
             if(tag_value.find(",") ==-1):
-                return int(tag_value)
+                #return int(tag_value)
+                return get_proper_type(tag_value)
             else:
                 if(tag_value.find(";") !=-1):
                     values = []
