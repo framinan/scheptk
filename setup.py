@@ -11,7 +11,7 @@ requirements = ["ipython>=6", "nbformat>=4", "nbconvert>=5", "requests>=2"]
 
 setup(
     name="scheptk",
-    version="0.0.4",
+    version="0.0.5",
     author="Jose M Framinan",
     author_email="framinan@us.es",
     description="Python scheduling package",
