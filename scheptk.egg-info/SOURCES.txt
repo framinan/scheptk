@@ -2,6 +2,7 @@ LICENSE
 README.md
 setup.py
 scheptk/__init__.py
+scheptk/scheptk.old.py
 scheptk/scheptk.py
 scheptk/util.py
 scheptk.egg-info/PKG-INFO

@@ -17,6 +17,16 @@ class Task:
         self.ct = ct
 
 
+# Non Availabilty Period
+class NAP:
+
+    def __init__(self, machine, st, ct, name=None):
+        self.machine = machine
+        self.st = st
+        self.ct = ct
+        self.name = name
+
+
 class Schedule():
 
     def __init__(self, filename=None):
@@ -25,6 +35,9 @@ class Schedule():
         self.task_list = []
         # job order (order to indicate which is each job in the schedule)
         self.job_order = []
+
+        # lists of NAPS in the schedule
+        self.NAP_list = []
 
         if(filename != None):
             # load the tag with the job order
@@ -45,6 +58,12 @@ class Schedule():
         # add the job to the job order (in case it is a new job)
         if( self.job_order.count(task.job) == 0):
             self.job_order.append(task.job)
+
+
+    def add_NAP(self, nap):
+
+        # add the NAP to the list
+        self.NAP_list.append(nap)
 
 
 
@@ -78,6 +97,8 @@ class Schedule():
         write_tag('JOB_ORDER',self.job_order, filename)
 
 
+
+            
     # print a basic gantt with the schedule given. Optionally, it saves the gantt in a png image
     def print(self, filename=None):
         
@@ -90,14 +111,14 @@ class Schedule():
         # palette of light colors
         colors = ['red','lime','deepskyblue','bisque','mintcream','royalblue','sandybrown','palegreen','pink','violet','cyan','darkseagreen','gold']
 
-        # compute number of machines
-        machines = set([task.machine for task in self.task_list])
+        # compute number of machines (those with tasks and those with NAPs)
+        machines = set([task.machine for task in self.task_list] + [nap.machine for nap in self.NAP_list])
 
         # create gantt
         figure, gantt = plt.subplots()    
-        
+
         # limits (makespan and depending on the number of machines)
-        gantt.set_xlim(0,max([task.ct for task in self.task_list]))
+        gantt.set_xlim(0,max([task.ct for task in self.task_list] + [nap.ct for nap in self.NAP_list]))
         gantt.set_ylim(0,len(machines) * tick_separation + tick_starting_at)
  
         # labels
@@ -119,23 +140,35 @@ class Schedule():
                 gantt.broken_barh(task[0],task[1],facecolors=colors[job % len(colors)], edgecolors='black', label = 'J' + str(job))
                 gantt.text(task[0][0][0] + task[0][0][1]/2, task[1][0] + task_height/2 - font_height,'J' + str(job))
 
+
+        # populate the NAPS in the gantt
+        # points to print
+        void_to_print = [[[(void.st, void.ct-void.st)],(tick_starting_at + tick_separation * (len(machines) - void.machine - 1), task_height)] for void in self.NAP_list]
+        for i,void in enumerate(void_to_print):
+            # printing only meaningful NAPS (>0)
+            if(void[0][0][0] != void[0][0][1]):
+                gantt.broken_barh(void[0],void[1],facecolors='white', edgecolors='black', label = self.NAP_list[i].name, hatch='//')
+                #gantt.text(void[0][0][0] + void[0][0][1]/2, void[1][0] + task_height/2 - font_height, self.NAP_list[i].name)
+                gantt.text(void[0][0][0] + (void[0][0][1]- len(self.NAP_list[i].name))/2, void[1][0] + task_height/2 - font_height, self.NAP_list[i].name)
+
         # optionally, the gantt is printed in hi-res
         if(filename != None):
-            figure.savefig(filename, dpi=600)
+            # facecolor is required (at least for .png) as savefig overwrites plot paramaters
+            figure.savefig(filename, dpi=600,facecolor='w')
 
 
 
 class Model(ABC):
  
-    # basic data, common to all layouts
+    # common properties to all layouts (include optional data)
+    # note that machines is not common for Single Machine environments 
     def __init__(self):
         self.jobs = 0 
         self.pt = []
         self.dd = []
         self.w = [] # weigths
         self.r = [] # release dates
-   
- 
+
     @abstractmethod
     def ct(self, sequence):
         pass
@@ -372,7 +405,7 @@ class Model(ABC):
     def print_schedule(self, solution, filename=None):
         gantt = self.create_schedule(solution)
         gantt.print(filename)
-
+ 
 
 
 # class to implement the single machine layout
