@@ -121,7 +121,7 @@ class Schedule():
 
         # optionally, the gantt is printed in hi-res
         if(filename != None):
-            figure.savefig(filename, dpi=600)
+            figure.savefig(filename, dpi=600, facecolor='w')
 
 
 
@@ -853,9 +853,6 @@ class OpenShop(Model):
     # implementation of the completion times of each job on each machine for OpenShop
     # it has to be a full sequence
     def ct(self, sequence):
-
-       # job order to be returned
-       job_order = []
          
        # completion times of jobs and machines
        ct_jobs = [self.r[j] for j in range(self.jobs)]
@@ -868,10 +865,6 @@ class OpenShop(Model):
 
            # obtain decoded_job
            decoded_job = job % self.jobs
-
-           # if it is a new job, it is appended to the job_order
-           if len([e for e in job_order if e == decoded_job]) == 0:
-               job_order.append(decoded_job)
            
            # obtain decoded machine
            decoded_machine = int((job - decoded_job) / self.jobs)
@@ -881,14 +874,11 @@ class OpenShop(Model):
            ct_jobs[decoded_job]= curr_completion_time
            ct_machines[decoded_machine] = curr_completion_time
 
-           # puts the completion time in the proper position the completion times matrix
-           order_decoded_job = job_order.index(decoded_job)
-           ct[decoded_machine][order_decoded_job] = curr_completion_time
+           ct[decoded_machine][decoded_job] = curr_completion_time
 
-       return ct, job_order
+       return ct, ct_jobs
    
 
    
-
 
 
