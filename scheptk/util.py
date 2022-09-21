@@ -1,7 +1,7 @@
 
 import ast # to get the proper data type
 import operator # for sorted functions
-from random import randint # generation of random integer numbers
+from random import randint, shuffle # generation of random integer numbers and to sort an extended seq
 
 
 # utility function to edit the value of a tag in a file
@@ -92,6 +92,17 @@ def print_tag(tag, value):
     else:
         # it is an scalar
         print("[" + tag + "=" + str(value) + "]")  
+
+
+# utility function to generate a random extended sequence for a jobshop with a given number of jobs and machines.
+def random_extended_sequence(jobs, machines):
+    extended_seq = []
+    for i in range(machines):
+        seq = random_sequence(jobs)
+        extended_seq = extended_seq + seq
+    shuffle(extended_seq)
+    return extended_seq
+
 
 # utility function to generate a random sequence of length size
 def random_sequence(size):

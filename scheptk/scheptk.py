@@ -4,6 +4,7 @@ import os # to implement deletion of files
 import operator # for sorted functions
 import matplotlib.pyplot as plt
 from random import randint # random solutions
+import math # maths
 
 from scheptk.util import random_sequence, read_tag, find_index_min, print_tag, sorted_index_asc, sorted_value_asc, sorted_value_desc, write_tag
 
@@ -173,6 +174,26 @@ class Model(ABC):
     def ct(self, sequence):
         pass
   
+
+    # complete completion times of all jobs in all machines (even if a partial solution is provided). 
+    # Here ct[i][j] indicates the completion time of job j on machine i. If this job is not in the partial solution, then nan is set as its corresponding completion times
+    def ctn(instance, solution):
+
+        # obtains the completion time of the jobs in the partial solution
+        ct, job_order = instance.ct(solution)
+
+        # initially, all positions are nan
+        ctn = [[float('nan') for j in range(instance.jobs)] for i in range(len(ct))]
+
+        # change the corresponding values
+        for i in range(len(ct)):
+            for j,job in enumerate(job_order):
+                ctn[i][job] = ct[i][j]
+
+        return ctn
+
+
+
     # concrete method: it returns the completion time of each job in the sequence 
     # it is a bit tricky so it can support different codifications of the solutions in each layout
     def Cj(instance, seq):
@@ -184,49 +205,123 @@ class Model(ABC):
     
         return Cj
 
+    # Cjn returns a list with the completion times of all jobs in the model (even if a partial solution has been provided) in the order of the jobs, 
+    # i.e. first element in Cjn corresponding to the completion times of job 0, second to the completion times of job 1, etc.
+    # When a partial solution is given, the completion times of the jobs not included in the partial solution are given as 'Nan' (non-available number)
+    def Cjn(instance, solution):
+
+        ct, order = instance.ct(solution)
+        cj =  [max([ct[i][j] for i in range(len(ct))]) for j in range(len(order))]
+        cjn = [float('nan') for j in range(instance.jobs)]
+        for j in range(len(order)):
+            cjn[order[j]] = cj[j]
+
+        return cjn
+
 
     # concrete method makespan
     def Cmax(self, sequence):
         return max(self.Cj(sequence))
 
-    #  earliness of all jobs
-    def Ej(self, sequence):
+    #  earliness of all jobs in a solution
+    def Ej(self, solution):
          if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")        
-         return [ max(self.dd[sequence[index]] - item,0) for index,item in enumerate(self.Cj(sequence))]
+            print("The instance does not have due dates and due-date related objective cannot be computed. The program cannot continue.")        
+            sys.exit()
+         ct, job_order = self.ct(solution)
+         Cj = [max([ct[i][j] for i in range(len(ct))]) for j in range(len(job_order))]
+         return [max(self.dd[job_order[j]] - Cj[j],0) for j in range(len(job_order))]
+
+    #  earliness of all jobs according to a solution (natural order of the jobs)
+    def Ejn(self, sequence):
+         if(self.dd == -1):
+            print("The instance does not have due dates and due-date related objective cannot be computed. The program cannot continue.")      
+            sys.exit()  
+         return [max(self.dd[j] - x ,0) for j, x in enumerate(self.Cjn(sequence))]
+
 
     # max earliness
     def Emax(self, sequence):    
          return max(self.Lj(sequence)) 
 
-   #  flowtime de cada uno de los trabajos
-    def Fj(self, sequence):
-        return [item - self.r[sequence[index]] for index,item in enumerate(self.Cj(sequence))]         
+   #  flowtime of all jobs in a solution
+    def Fj(self, solution):
+        ct, job_order = self.ct(solution)
+        Cj = [max([ct[i][j] for i in range(len(ct))]) for j in range(len(job_order))]
+        return [Cj[j] - min([ct[i][j] - self.pt[i][job_order[j]] for i in range(len(ct))]) for j in range(len(job_order))]  
+
+
+    #  flowtime of all jobs according to a solution (natural order of the jobs)
+    def Fjn(self, solution):
+        return [self.Cjn(solution)[j] - self.Sjn(solution)[j] for j in range(self.jobs)]         
+
 
    # max flowtime
     def Fmax(self, sequence):
         return max( self.Fj(sequence))
         
-    # lateness of all jobs in the sequence
-    def Lj(self, sequence):
+    # lateness of all jobs in the solution
+    def Lj(self, solution):
+         if(self.dd == -1):
+            print("The instance does not have due dates and due-date related objective cannot be computed. The program cannot continue.")        
+            sys.exit()
+         ct, job_order = self.ct(solution)
+         Cj = [max([ct[i][j] for i in range(len(ct))]) for j in range(len(job_order))]      
+         return [Cj[j] - self.dd[job_order[j]] for j in range(len(job_order))]
+
+    # lateness of all jobs according to a solution (natural order of the jobs)
+    def Ljn(self, sequence):
         if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")        
-        return [item - self.dd[sequence[index]] for index,item in enumerate(self.Cj(sequence))]
+            print("The instance does not have due dates and due-date related objective cannot be computed. The program cannot continue.")
+            sys.exit()        
+        return [item - self.dd[index] for index,item in enumerate(self.Cjn(sequence))]
+
 
     # max lateness
     def Lmax(self, sequence):
         return max(self.Lj(sequence))
 
-    # tardiness of all jobs
-    def Tj(self, sequence):
+
+    # weighted makespan
+    def max_WjCj(self, sequence):
+        return max([item * self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
+
+    # weighted max earliness
+    def max_WjEj(self, sequence):
+        if(self.dd == -1):
+            print("The instance does not have due dates and due-date related objective cannot be computed.")        
+        return max([ (max(self.dd[sequence[index]] - item,0) * self.w[sequence[index]]) for index,item in enumerate(self.Cj(sequence))])
+
+   # weighted max flowtime
+    def max_WjFj(self, sequence):
+        return max([(item - self.r[sequence[index]])* self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
+        
+    # weighted max lateness
+    def max_WjLj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return [ max(item - self.dd[sequence[index]],0) for index,item in enumerate(self.Cj(sequence))]
+        return max([ (item - self.dd[sequence[index]])*self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
 
-    # max tardiness
-    def Tmax(self, sequence):
-        return max(self.Tj(sequence))
+    # weighted max tardiness
+    def max_WjTj(self, sequence):
+        if(self.dd == -1):
+            print("The instance does not have due dates and due-date related objective cannot be computed.")
+        return max([ (max(item - self.dd[sequence[index]],0) * self.w[sequence[index]]) for index,item in enumerate(self.Cj(sequence))])
+  
 
+   #  starting times of all jobs in a solution
+    def Sj(self, solution):
+        ct, job_order = self.ct(solution)
+        return [min([ct[i][j] - self.pt[i][job_order[j]] for i in range(len(ct))]) for j in range(len(job_order))]
+
+    # starting times of all jobs according to a solution (natural order of the jobs)
+    def Sjn(self, solution):
+        sjn = [float('nan') for j in range(self.jobs)]
+        ct, job_order = self.ct(solution)
+        for j, job in enumerate(job_order):
+            sjn[job] =  min([ct[i][j] - self.pt[i][job] for i in range(len(ct))])
+        return sjn
+        
     # sum of completion tme
     def SumCj(self, sequence):
         return sum(self.Cj(sequence))
@@ -250,33 +345,7 @@ class Model(ABC):
     # sum of tardy jobs
     def SumUj(self, sequence):
         return sum( self.Uj(sequence))
-
-    # weighted makespan
-    def WjCmax(self, sequence):
-        return max([item * self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
-
-    # weighted max earliness
-    def WjEmax(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")        
-        return max([ (max(self.dd[sequence[index]] - item,0) * self.w[sequence[index]]) for index,item in enumerate(self.Cj(sequence))])
-
-   # weighted max flowtime
-    def WjFmax(self, sequence):
-        return max([(item - self.r[sequence[index]])* self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
-        
-    # weighted max lateness
-    def WjLmax(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return max([ (item - self.dd[sequence[index]])*self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
-
-    # weighted max tardiness
-    def WjTmax(self, sequence):
-        if(self.dd == -1):
-            print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return max([ (max(item - self.dd[sequence[index]],0) * self.w[sequence[index]]) for index,item in enumerate(self.Cj(sequence))])
-        
+     
     # weighted sum of completion times
     def SumWjCj(self, sequence):
         return sum([item * self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
@@ -288,7 +357,7 @@ class Model(ABC):
         return sum([ (max(self.dd[sequence[index]] - item,0) * self.w[sequence[index]]) for index,item in enumerate(self.Cj(sequence))])
 
     # weighted sum of flowtime
-    def WjFmax(self, sequence):
+    def SumWjFj(self, sequence):
         return sum([(item - self.r[sequence[index]])* self.w[sequence[index]] for index,item in enumerate(self.Cj(sequence))])
    
     # weighted sum of lateness
@@ -309,9 +378,33 @@ class Model(ABC):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
         return sum([1 if (item - self.dd[sequence[index]]) > 0 else 0 for index,item in enumerate(self.Cj(sequence))])
 
+ # tardiness of all jobs in a solution
+    def Tj(self, solution):
+         if(self.dd == -1):
+            print("The instance does not have due dates and due-date related objective cannot be computed. The program cannot continue.")        
+            sys.exit()
+         ct, job_order = self.ct(solution)
+         Cj = [max([ct[i][j] for i in range(len(ct))]) for j in range(len(job_order))]      
+         return [max(Cj[j] - self.dd[job_order[j]],0) for j in range(len(job_order))]
+
+    # tardiness of all jobs according to a solution (natural order of the jobs)
+    def Tjn(self, sequence):
+        if(self.dd == -1):
+            print("The instance does not have due dates and due-date related objective cannot be computed. The program cannot continue.")
+            sys.exit()        
+        return [max(item - self.dd[index],0) for index,item in enumerate(self.Cjn(sequence))]
+   
+    # max tardiness
+    def Tmax(self, sequence):       
+        return max(self.Tj(sequence))
+
     # vector of tardy jobs: 1 if the job is tardy, 0 otherwise
     def Uj(self, sequence):
         return [1 if t >0 else 0 for t in self.Tj(sequence)]
+
+    def Ujn(self, solution):
+        return [float('nan') if math.isnan(t) else 1 if t >0 else 0 for t in self.Tjn(solution)]
+
 
 
     # other methods to check data that are implemented in all children
@@ -774,10 +867,11 @@ class JobShop(Model):
         print("----- end of JobShop instance data from file " + filename + " -------")    
 
 
+   
      def ct(self, solution):
          
        # get the jobs involved in the solution in the order they are processed
-       jobs_involved = list(set(solution))
+       jobs_involved = list(dict.fromkeys(solution))
 
        # completion times of jobs and machines
        ct_jobs = [self.r[jobs_involved[j]] for j in range(len(jobs_involved))]
@@ -808,7 +902,6 @@ class JobShop(Model):
 
        return ct, jobs_involved
 
-   
     
      # implementation of a random solution of the instance
      def random_solution(self):
