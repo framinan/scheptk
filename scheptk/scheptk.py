@@ -244,16 +244,20 @@ class Model(ABC):
     def Emax(self, sequence):    
          return max(self.Lj(sequence)) 
 
-   #  flowtime of all jobs in a solution
+   #  flowtime (Cj - rj) of all jobs in a solution 
     def Fj(self, solution):
-        ct, job_order = self.ct(solution)
-        Cj = [max([ct[i][j] for i in range(len(ct))]) for j in range(len(job_order))]
-        return [Cj[j] - min([ct[i][j] - self.pt[i][job_order[j]] for i in range(len(ct))]) for j in range(len(job_order))]  
+       ct, job_order = self.ct(solution)
+       return [max([ct[i][j] for i in range(len(ct))]) - self.r[job_order[j]] for j in range(len(job_order))]
 
-
-    #  flowtime of all jobs according to a solution (natural order of the jobs)
+    #  flowtime (Cj - rj) of all jobs according to a solution (natural order of the jobs)
     def Fjn(self, solution):
-        return [self.Cjn(solution)[j] - self.Sjn(solution)[j] for j in range(self.jobs)]         
+        ct, order = self.ct(solution)
+        cj =  [max([ct[i][j] for i in range(len(ct))]) for j in range(len(order))]
+        fjn = [float('nan') for j in range(self.jobs)]
+        for j in range(len(order)):
+            fjn[order[j]] = cj[j] - self.r[j]
+
+        return fjn         
 
 
    # max flowtime
