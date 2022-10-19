@@ -242,7 +242,7 @@ class Model(ABC):
 
     # max earliness
     def Emax(self, sequence):    
-         return max(self.Lj(sequence)) 
+         return max(self.Ej(sequence)) 
 
    #  flowtime (Cj - rj) of all jobs in a solution 
     def Fj(self, solution):
