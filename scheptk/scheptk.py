@@ -380,7 +380,7 @@ class Model(ABC):
     def SumWjUj(self, sequence):
         if(self.dd == -1):
             print("The instance does not have due dates and due-date related objective cannot be computed.")
-        return sum([1 if (item - self.dd[sequence[index]]) > 0 else 0 for index,item in enumerate(self.Cj(sequence))])
+        return sum([self.w[sequence[index]] if (item - self.dd[sequence[index]]) > 0 else 0 for index,item in enumerate(self.Cj(sequence))])
 
  # tardiness of all jobs in a solution
     def Tj(self, solution):
