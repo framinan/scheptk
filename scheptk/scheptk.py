@@ -929,7 +929,16 @@ class JobShop(Model):
 
        return ct, jobs_involved
 
-    
+    # get the order of the jobs in a given solution (according to the time in which they are processed in the first machine)
+     def get_sequence(self, solution):
+            
+        # get the jobs involved in the solution in the order they are processed
+        jobs_involved = list(dict.fromkeys(solution))
+
+        return jobs_involved
+
+
+
      # implementation of a random solution of the instance
      def random_solution(self):
         solution = []
@@ -1002,10 +1011,20 @@ class OpenShop(Model):
     # implementation of random_solution()
     def random_solution(self):
         return random_sequence(self.jobs * self.machines)
+    
+
+    # get_job: obtains the job corresponding to an operation 
+    def get_job(self, op):
+        return op % self.jobs
+  
+    # get_machine: obtains the machine corresponding to an operation
+    def get_machine(self, op):
+        return int((op - self.get_job(op)) / self.jobs)
+
 
     # implementation of the completion times of each job on each machine for OpenShop
     # it has to be a full sequence
-    def ct(self, sequence):
+    def ct(self, solution):
 
        # job order to be returned
        job_order = []
@@ -1017,18 +1036,17 @@ class OpenShop(Model):
        # completion time of each job on each machine
        ct = [[0 for j in range(self.jobs)] for i in range(self.machines)]
 
-       for job in sequence:
+       for op in solution:
 
            # obtain decoded_job
-           decoded_job = job % self.jobs
+           decoded_job = self.get_job(op)
 
            # if it is a new job, it is appended to the job_order
            if len([e for e in job_order if e == decoded_job]) == 0:
                job_order.append(decoded_job)
            
            # obtain decoded machine
-           decoded_machine = int((job - decoded_job) / self.jobs)
-
+           decoded_machine = self.get_machine(op)
            # compute completion time
            curr_completion_time = max(ct_jobs[decoded_job], ct_machines[decoded_machine]) + self.pt[decoded_machine][decoded_job]
            ct_jobs[decoded_job]= curr_completion_time
@@ -1040,6 +1058,22 @@ class OpenShop(Model):
 
        return ct, job_order
    
+   # returns the sequence of jobs in a given solution. It is useful e.g. to check job-level measures
+    def get_sequence(self, solution):
+
+       # job order to be returned
+       job_order = []
+         
+       for op in solution:
+
+           # obtain decoded_job
+           decoded_job = self.get_job(op)
+
+           # if it is a new job, it is appended to the job_order
+           if len([e for e in job_order if e == decoded_job]) == 0:
+               job_order.append(decoded_job)
+
+       return job_order
 
    
 
